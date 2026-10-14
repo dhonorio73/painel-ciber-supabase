@@ -5,7 +5,7 @@ import datetime
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(
-    page_title="Painel de Cibersegurança - Supabase",
+    page_title="Painel Ciber - Supabase",
     page_icon="🛡️",
     layout="wide"
 )
@@ -41,9 +41,9 @@ def inserir_registo(nome_operador, termo):
     
     payload = {
         "id": timestamp_id,
-        "nome_operador": nome_operador,
+        "nome_operador": str(nome_operador)[:100],
         "data_nascimento": "Automático",
-        "termo_pesquisado": termo,
+        "termo_pesquisado": str(termo)[:255],
         "data_hora": data_hora_atual
     }
     
@@ -70,7 +70,7 @@ if submit_button:
         else:
             st.sidebar.error("Erro ao enviar para o Supabase.")
     else:
-            st.sidebar.warning("Por favor, insira um termo técnico.")
+        st.sidebar.warning("Por favor, insira um termo técnico.")
 
 # --- PAINEL PRINCIPAL ---
 st.title("🛡️ Painel de Inteligência de Ameaças (Cibersegurança)")
@@ -111,7 +111,6 @@ if not df.empty:
         df_filtrado = df_filtrado[df_filtrado["termo_pesquisado"].str.contains(filtro_termo, case=False, na=False)]
 
     # --- ALERTAS DE SEGURANÇA INTELIGENTES ---
-    # Verifica termos críticos na tabela filtrada
     termos_criticos = ["virus", "ransomware", "zero-day", "malicious", "compromised"]
     alerta_detectado = False
     for termo in termos_criticos:
@@ -129,8 +128,3 @@ if not df.empty:
     st.dataframe(df_filtrado.head(limite_slider), use_container_width=True)
 else:
     st.info("A tabela de dados está vazia ou a carregar...")
-
-<Elicitations message="Como deseja aplicar estas melhorias no seu Streamlit?">
-  <Elicitation label="Adicionar autenticação por senha" query="Como posso proteger este painel do Streamlit com uma senha de acesso para a empresa?"/>
-  <Elicitation label="Criar gráficos analíticos" query="Como posso adicionar gráficos de barras para mostrar quais operadores registam mais ameaças?"/>
-</Elicitations>
