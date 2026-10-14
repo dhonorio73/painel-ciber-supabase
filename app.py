@@ -12,7 +12,7 @@ st.set_page_config(
 
 # --- CREDENCIAIS DO SUPABASE ---
 SUPABASE_URL = "https://sonjvqvaithtpzrqbolf.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvbmp2cXZhaXRodHB6cnFib2xmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3MzI0NzQsImV4cCI6MjEwNzMwODQ3NH0.U30fYDFbG418bDzY7ampcy30ZiVun7DBr4T7FjKchPg"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJz dXBhYmFzZSIsInJlZiI6InNvbmp2cXZhaXRodHB6cnFib2xmIi wicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3MzI0NzQsImV4cCI6 MjEwNzMwODQ3NH0.U30fYDFbG418bDzY7ampcy30ZiVun7DBr4 T7FjKchPg"
 
 headers = {
     "apikey": SUPABASE_KEY,
@@ -200,8 +200,8 @@ if not df.empty:
             use_container_width=True
         )
     
-    # --- EXPORTAÇÃO CSV CORRIGIDA (UTF-8-SIG PARA ABRIR PERFEITO NO EXCEL) ---
-    csv_string = df_organizado.to_csv(index=False, encoding='utf-8-sig')
+    # --- EXPORTAÇÃO CSV CORRIGIDA E SEPARADA POR VÍRGULA NATIVA ---
+    csv_string = df_organizado.to_csv(index=False, sep=',', encoding='utf-8-sig')
     
     st.download_button(
         label="📥 Descarregar Relatório CSV Organizado",
