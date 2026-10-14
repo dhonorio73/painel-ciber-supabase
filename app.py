@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 import datetime
+import io
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(
@@ -12,7 +13,7 @@ st.set_page_config(
 
 # --- CREDENCIAIS DO SUPABASE ---
 SUPABASE_URL = "https://sonjvqvaithtpzrqbolf.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvbmp2cXZhaXRodHB6cnFib2xmIi wicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3MzI0NzQsImV4cCI6 MjEwNzMwODQ3NH0.U30fYDFbG418bDzY7ampcy30ZiVun7DBr4 T7FjKchPg"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvbmp2cXZhaXRodHB6cnFib2xmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3MzI0NzQsImV4cCI6MjEwNzMwODQ3NH0.U30fYDFbG418bDzY7ampcy30ZiVun7DBr4T7FjKchPg"
 
 headers = {
     "apikey": SUPABASE_KEY,
@@ -104,7 +105,7 @@ if st.sidebar.button("🚪 Terminar Sessão"):
 
 # --- PAINEL PRINCIPAL ---
 st.title("🛡️ Painel de Inteligência de Ameaças (Cibersegurança)")
-st.markdown("Dashboard executivo com relatórios estruturados, seguros e compatíveis com folhas de cálculo.")
+st.markdown("Dashboard executivo com relatórios profissionais em Excel, gráficos analíticos e auditoria avançada.")
 
 df = carregar_dados()
 
@@ -173,7 +174,7 @@ if not df.empty:
             contagem_tempo = df_temporal["data_dia"].value_counts().sort_index()
             st.line_chart(contagem_tempo)
 
-    # --- ORGANIZAÇÃO E ESTRUTURAÇÃO DO DATAFRAME ---
+    # --- ORGANIZAÇÃO DO DATAFRAME ---
     st.markdown("### 📊 Histórico Detalhado e Organizado")
     limite_slider = st.slider("Quantidade de registos a exibir na tabela", 5, 50, 10)
     
@@ -185,7 +186,7 @@ if not df.empty:
         "data_hora": "Data e Hora",
         "nome_operador": "Operador",
         "Severidade": "Nível de Severidade",
-        "termo_pesquisado": "Termo Técnico ou Ameaça"
+        "termo_pesquisado": "Termo Técnico / Ameaça"
     }, inplace=True)
 
     def colorir_linhas(row):
@@ -200,14 +201,81 @@ if not df.empty:
             use_container_width=True
         )
     
-    # --- EXPORTAÇÃO CSV OTIMIZADA COM PONTO E VÍRGULA (;) ---
-    csv_string = df_organizado.to_csv(index=False, sep=';', encoding='utf-8-sig')
-    
-    st.download_button(
-        label="📥 Descarregar Relatório Organizado (.csv)",
-        data=csv_string,
-        file_name="relatorio_ciber_organizado.csv",
-        mime="text/csv",
-    )
+    # --- GERADOR DE EXCEL PROFISSIONAL (.xlsx) COM TRATAMENTO DE ERRO DE BIBLIOTECA ---
+    try:
+        import openpyxl
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df_organizado.to_excel(writer, index=False, sheet_name='Auditoria Ciber')
+            
+            workbook = writer.book
+            worksheet = writer.sheets['Auditoria Ciber']
+            
+            from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+            
+            fill_cabecalho = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
+            font_cabecalho = Font(name="Arial", size=11, bold=True, color="FFFFFF")
+            borda_fina = Border(
+                left=Side(style='thin', color='D9D9D9'),
+                right=Side(style='thin', color='D9D9D9'),
+                top=Side(style='thin', color='D9D9D9'),
+                bottom=Side(style='thin', color='D9D9D9')
+            )
+            
+            fill_critico = PatternFill(start_color="FCE4D6", end_color="FCE4D6", fill_type="solid")
+            font_critico = Font(name="Arial", size=10, color="C00000", bold=True)
+            
+            fill_normal = PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")
+            font_normal = Font(name="Arial", size=10, color="375623")
+            
+            for col_num in range(1, len(df_organizado.columns) + 1):
+                celula = worksheet.cell(row=1, column=col_num)
+                celula.fill = fill_cabecalho
+                celula.font = font_cabecalhub = font_cabecalho
+                celula.alignment = Alignment(horizontal="center", vertical="center")
+                
+            for row_num in range(2, len(df_organizado) + 2):
+                severidade_val = worksheet.cell(row=row_num, column=4).value
+                is_critico = "CRÍTICO" in str(severidade_val)
+                
+                for col_num in range(1, len(df_organizado.columns) + 1):
+                    celula = worksheet.cell(row=row_num, column=col_num)
+                    celula.border = borda_fina
+                    celula.alignment = Alignment(vertical="center")
+                    
+                    if is_critico:
+                        celula.fill = fill_critico
+                        if col_num == 4:
+                            celula.font = font_critico
+                    else:
+                        if col_num == 4:
+                            celula.fill = fill_normal
+                            celula.font = font_normal
+                            
+            for col in worksheet.columns:
+                max_len = 0
+                col_letter = col[0].column_letter
+                for celula in col:
+                    if celula.value:
+                        max_len = max(max_len, len(str(celula.value)))
+                worksheet.column_dimensions[col_letter].width = max(max_len + 5, 18)
+
+        excel_data = output.getvalue()
+
+        st.download_button(
+            label="📥 Descarregar Relatório Executivo em Excel (.xlsx)",
+            data=excel_data,
+            file_name="relatorio_ciber_executivo.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    except ImportError:
+        # Fallback seguro caso o openpyxl não esteja presente no servidor
+        csv_string = df_organizado.to_csv(index=False, sep=';', encoding='utf-8-sig')
+        st.download_button(
+            label="📥 Descarregar Relatório Organizado (.csv)",
+            data=csv_string,
+            file_name="relatorio_ciber_organizado.csv",
+            mime="text/csv",
+        )
 else:
     st.info("A tabela de dados está vazia ou a carregar...")
