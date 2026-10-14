@@ -104,7 +104,7 @@ if st.sidebar.button("🚪 Terminar Sessão"):
 
 # --- PAINEL PRINCIPAL ---
 st.title("🛡️ Painel de Inteligência de Ameaças (Cibersegurança)")
-st.markdown("Dashboard executivo com relatórios limpos, estruturados e categorizados por cores de severidade.")
+st.markdown("Dashboard executivo com relatórios estruturados, seguros e compatíveis com folhas de cálculo.")
 
 df = carregar_dados()
 
@@ -141,15 +141,14 @@ if not df.empty:
     # --- ALERTAS DE SEGURANÇA INTELIGENTES ---
     termos_criticos = ["virus", "ransomware", "zero-day", "malicious", "compromised", "attack"]
     
-    # Função para classificar o nível de risco/severidade e definir a cor
     def classificar_risco(termo):
         if any(c in str(termo).lower() for c in termos_criticos):
-            return "🔴 CRÍTICO"
-        return "🟢 Normal"
+            return "CRÍTICO"
+        return "Normal"
 
     df_filtrado["Severidade"] = df_filtrado["termo_pesquisado"].apply(classificar_risco)
 
-    alerta_detectado = (df_filtrado["Severidade"] == "🔴 CRÍTICO").any()
+    alerta_detectado = (df_filtrado["Severidade"] == "CRÍTICO").any()
             
     if alerta_detectado:
         st.error("🚨 **ALERTA CRÍTICO DE SEGURANÇA:** Foram encontrados vetores de ataque maliciosos nos registos abaixo!")
@@ -174,15 +173,13 @@ if not df.empty:
             contagem_tempo = df_temporal["data_dia"].value_counts().sort_index()
             st.line_chart(contagem_tempo)
 
-    # --- ORGANIZAÇÃO E ESTRUTURAÇÃO DO DATAFRAME/CSV ---
+    # --- ORGANIZAÇÃO E ESTRUTURAÇÃO DO DATAFRAME ---
     st.markdown("### 📊 Histórico Detalhado e Organizado")
     limite_slider = st.slider("Quantidade de registos a exibir na tabela", 5, 50, 10)
     
-    # Seleção exata e limpa das colunas desejadas (removendo a data_nascimento inútil)
     colunas_finais = ["id", "data_hora", "nome_operador", "Severidade", "termo_pesquisado"]
     df_organizado = df_filtrado[[c for c in colunas_finais if c in df_filtrado.columns]].copy()
     
-    # Renomear os cabeçalhos para português limpo
     df_organizado.rename(columns={
         "id": "ID do Registo",
         "data_hora": "Data e Hora",
@@ -191,7 +188,6 @@ if not df.empty:
         "termo_pesquisado": "Termo Técnico / Ameaça"
     }, inplace=True)
 
-    # Estilização visual em cores na tabela do Streamlit
     def colorir_linhas(row):
         if "CRÍTICO" in str(row["Nível de Severidade"]):
             return ['background-color: rgba(255, 75, 75, 0.25); color: #ff4b4b; font-weight: bold;'] * len(row)
@@ -204,11 +200,12 @@ if not df.empty:
             use_container_width=True
         )
     
-    # --- EXPORTAÇÃO CSV LIMPA E ORGANIZADA ---
-    csv_dados = df_organizado.to_csv(index=False).encode('utf-8')
+    # --- EXPORTAÇÃO CSV FORMATADA (APENAS DOWNLOAD DO ARQUIVO) ---
+    csv_string = df_organizado.to_csv(index=False, encoding='utf-8', quoting=1)
+    
     st.download_button(
         label="📥 Descarregar Relatório CSV Organizado e Colorido",
-        data=csv_dados,
+        data=csv_string,
         file_name="relatorio_ciber_organizado_severidade.csv",
         mime="text/csv",
     )
