@@ -200,7 +200,7 @@ if not df.empty:
             use_container_width=True
         )
     
-    # --- EXPORTAÇÃO CSV CORRIGIDA (ENCODING UTF-8-SIG E SEM ASPAS DESNECESSÁRIAS) ---
+    # --- EXPORTAÇÃO CSV CORRIGIDA (UTF-8-SIG PARA ABRIR PERFEITO NO EXCEL) ---
     csv_string = df_organizado.to_csv(index=False, encoding='utf-8-sig')
     
     st.download_button(
