@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 import datetime
+import io
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(
@@ -44,7 +45,7 @@ if not verificar_autenticacao():
     st.stop()
 
 # --- FUNÇÕES DE CONEXÃO E LEITURA DE DADOS ---
-@st.cache_data(ttl=2)
+@st.cache_data(ttl=5)
 def carregar_dados():
     endpoint = f"{SUPABASE_URL}/rest/v1/historico_pesquisas?select=*&order=id.desc"
     try:
@@ -56,12 +57,8 @@ def carregar_dados():
                 if "data_hora" in df.columns:
                     df["data_hora"] = pd.to_datetime(df["data_hora"], errors="coerce")
                 return df
-            else:
-                return pd.DataFrame() # Retorna DataFrame vazio se não houver dados
-        else:
-            st.error(f"Erro na API do Supabase (Código {response.status_code}): {response.text}")
     except Exception as e:
-        st.error(f"Erro de conexão: {e}")
+        st.error(f"Erro ao conectar com o Supabase: {e}")
     return pd.DataFrame()
 
 def inserir_registo(nome_operador, termo):
@@ -80,8 +77,7 @@ def inserir_registo(nome_operador, termo):
     try:
         response = requests.post(endpoint, headers=headers, json=payload)
         return response.status_code in [200, 201]
-    except Exception as e:
-        st.error(f"Erro ao inserir: {e}")
+    except:
         return False
 
 # --- INTERFACE LATERAL ---
@@ -109,14 +105,14 @@ if st.sidebar.button("🚪 Terminar Sessão"):
 
 # --- PAINEL PRINCIPAL ---
 st.title("🛡️ Painel de Inteligência de Ameaças (Cibersegurança)")
-st.markdown("Dashboard executivo com relatórios estruturados e ligação direta ao Supabase.")
+st.markdown("Dashboard executivo com relatórios profissionais em Excel, gráficos analíticos e auditoria avançada.")
 
 df = carregar_dados()
 
-if not df.empty and "termo_pesquisado" in df.columns:
+if not df.empty:
     # --- MÉTRICAS SUPERIORES (KPIs) ---
     total_registos = len(df)
-    operadores_unicos = df["nome_operador"].nunique() if "nome_operador" in df.columns else 0
+    operadores_unicos = df["nome_operador"].nunique()
     ultima_atualizacao = df["data_hora"].max().strftime("%Y-%m-%d %H:%M:%S") if "data_hora" in df.columns and pd.notnull(df["data_hora"].max()) else "N/A"
     
     col1, col2, col3 = st.columns(3)
@@ -131,7 +127,7 @@ if not df.empty and "termo_pesquisado" in df.columns:
     f_col1, f_col2 = st.columns(2)
     
     with f_col1:
-        operadores_lista = ["Todos"] + list(df["nome_operador"].unique()) if "nome_operador" in df.columns else ["Todos"]
+        operadores_lista = ["Todos"] + list(df["nome_operador"].unique())
         filtro_operador = st.selectbox("Filtrar por Operador:", operadores_lista)
         
     with f_col2:
@@ -166,7 +162,7 @@ if not df.empty and "termo_pesquisado" in df.columns:
     
     with g_col1:
         st.markdown("**Registos por Operador**")
-        if not df_filtrado.empty and "nome_operador" in df_filtrado.columns:
+        if not df_filtrado.empty:
             contagem_ops = df_filtrado["nome_operador"].value_counts()
             st.bar_chart(contagem_ops)
             
@@ -178,7 +174,7 @@ if not df.empty and "termo_pesquisado" in df.columns:
             contagem_tempo = df_temporal["data_dia"].value_counts().sort_index()
             st.line_chart(contagem_tempo)
 
-    # --- ORGANIZAÇÃO E ESTRUTURAÇÃO DO DATAFRAME ---
+    # --- ORGANIZAÇÃO DO DATAFRAME ---
     st.markdown("### 📊 Histórico Detalhado e Organizado")
     limite_slider = st.slider("Quantidade de registos a exibir na tabela", 5, 50, 10)
     
@@ -189,12 +185,12 @@ if not df.empty and "termo_pesquisado" in df.columns:
         "id": "ID do Registo",
         "data_hora": "Data e Hora",
         "nome_operador": "Operador",
-        "Severidade": "Nivel de Severidade",
-        "termo_pesquisado": "Termo Tecnico ou Ameaca"
+        "Severidade": "Nível de Severidade",
+        "termo_pesquisado": "Termo Técnico / Ameaça"
     }, inplace=True)
 
     def colorir_linhas(row):
-        if "CRÍTICO" in str(row["Nivel de Severidade"]):
+        if "CRÍTICO" in str(row["Nível de Severidade"]):
             return ['background-color: rgba(255, 75, 75, 0.25); color: #ff4b4b; font-weight: bold;'] * len(row)
         return [''] * len(row)
 
@@ -205,14 +201,75 @@ if not df.empty and "termo_pesquisado" in df.columns:
             use_container_width=True
         )
     
-    # --- EXPORTAÇÃO CSV ---
-    csv_string = df_organizado.to_csv(index=False, encoding='utf-8-sig')
-    
+    # --- GERADOR DE EXCEL PROFISSIONAL (.xlsx) COM OPENPYXL ---
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df_organizado.to_excel(writer, index=False, sheet_name='Auditoria Ciber')
+        
+        workbook = writer.book
+        worksheet = writer.sheets['Auditoria Ciber']
+        
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        
+        # Estilos do Cabeçalho
+        fill_cabecalho = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
+        font_cabecalho = Font(name="Arial", size=11, bold=True, color="FFFFFF")
+        borda_fina = Border(
+            left=Side(style='thin', color='D9D9D9'),
+            right=Side(style='thin', color='D9D9D9'),
+            top=Side(style='thin', color='D9D9D9'),
+            bottom=Side(style='thin', color='D9D9D9')
+        )
+        
+        # Estilos de Cores para Linhas Críticas e Normais
+        fill_critico = PatternFill(start_color="FCE4D6", end_color="FCE4D6", fill_type="solid")
+        font_critico = Font(name="Arial", size=10, color="C00000", bold=True)
+        
+        fill_normal = PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")
+        font_normal = Font(name="Arial", size=10, color="375623")
+        
+        # Aplicar estilo ao cabeçalho
+        for col_num in range(1, len(df_organizado.columns) + 1):
+            celula = worksheet.cell(row=1, column=col_num)
+            celula.fill = fill_cabecalho
+            celula.font = font_cabecalho
+            celula.alignment = Alignment(horizontal="center", vertical="center")
+            
+        # Estilizar células e aplicar cores condicionais baseadas na coluna de severidade
+        for row_num in range(2, len(df_organizado) + 2):
+            severidade_val = worksheet.cell(row=row_num, column=4).value # Coluna Nível de Severidade
+            is_critico = "CRÍTICO" in str(severidade_val)
+            
+            for col_num in range(1, len(df_organizado.columns) + 1):
+                celula = worksheet.cell(row=row_num, column=col_num)
+                celula.border = borda_fina
+                celula.alignment = Alignment(vertical="center")
+                
+                if is_critico:
+                    celula.fill = fill_critico
+                    if col_num == 4:
+                        celula.font = font_critico
+                else:
+                    if col_num == 4:
+                        celula.fill = fill_normal
+                        celula.font = font_normal
+                        
+        # Ajuste dinâmico da largura das colunas
+        for col in worksheet.columns:
+            max_len = 0
+            col_letter = col[0].column_letter
+            for celula in col:
+                if celula.value:
+                    max_len = max(max_len, len(str(celula.value)))
+            worksheet.column_dimensions[col_letter].width = max(max_len + 5, 18)
+
+    excel_data = output.getvalue()
+
     st.download_button(
-        label="📥 Descarregar Relatório CSV Organizado",
-        data=csv_string,
-        file_name="relatorio_ciber_organizado.csv",
-        mime="text/csv",
+        label="📥 Descarregar Relatório Executivo em Excel (.xlsx)",
+        data=excel_data,
+        file_name="relatorio_ciber_executivo.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 else:
-    st.info("ℹ️ A tabela de dados no Supabase está vazia ou a carregar. Utilize o formulário na barra lateral para inserir o primeiro registo técnico.")
+    st.info("A tabela de dados está vazia ou a carregar...")
