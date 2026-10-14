@@ -184,12 +184,12 @@ if not df.empty:
         "id": "ID do Registo",
         "data_hora": "Data e Hora",
         "nome_operador": "Operador",
-        "Severidade": "Nível de Severidade",
-        "termo_pesquisado": "Termo Técnico / Ameaça"
+        "Severidade": "Nivel de Severidade",
+        "termo_pesquisado": "Termo Tecnico ou Ameaca"
     }, inplace=True)
 
     def colorir_linhas(row):
-        if "CRÍTICO" in str(row["Nível de Severidade"]):
+        if "CRÍTICO" in str(row["Nivel de Severidade"]):
             return ['background-color: rgba(255, 75, 75, 0.25); color: #ff4b4b; font-weight: bold;'] * len(row)
         return [''] * len(row)
 
@@ -200,13 +200,13 @@ if not df.empty:
             use_container_width=True
         )
     
-    # --- EXPORTAÇÃO CSV FORMATADA (APENAS DOWNLOAD DO ARQUIVO) ---
-    csv_string = df_organizado.to_csv(index=False, encoding='utf-8', quoting=1)
+    # --- EXPORTAÇÃO CSV CORRIGIDA (ENCODING UTF-8-SIG E SEM ASPAS DESNECESSÁRIAS) ---
+    csv_string = df_organizado.to_csv(index=False, encoding='utf-8-sig')
     
     st.download_button(
-        label="📥 Descarregar Relatório CSV Organizado e Colorido",
+        label="📥 Descarregar Relatório CSV Organizado",
         data=csv_string,
-        file_name="relatorio_ciber_organizado_severidade.csv",
+        file_name="relatorio_ciber_organizado.csv",
         mime="text/csv",
     )
 else:
