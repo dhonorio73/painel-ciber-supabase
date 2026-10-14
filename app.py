@@ -21,6 +21,30 @@ headers = {
     "Prefer": "return=representation"
 }
 
+# --- SISTEMA DE AUTENTICAÇÃO POR SENHA ---
+def verificar_autenticacao():
+    if "autenticado" not in st.session_state:
+        st.session_state.autenticado = False
+
+    if not st.session_state.autenticado:
+        st.sidebar.subheader("🔒 Acesso Restrito")
+        senha_input = st.sidebar.text_input("Palavra-passe corporativa:", type="password")
+        if st.sidebar.button("Entrar"):
+            # Senha corporativa configurada
+            if senha_input == "ciber2026":
+                st.session_state.autenticado = True
+                st.rerun()
+            else:
+                st.sidebar.error("Palavra-passe incorreta.")
+        return False
+    return True
+
+# Interrompe a execução caso não esteja autenticado
+if not verificar_autenticacao():
+    st.title("🛡️ Painel de Inteligência de Ameaças (Cibersegurança)")
+    st.warning("⚠️ Por favor, introduza a palavra-passe corporativa (`ciber2026`) na barra lateral para aceder ao dashboard.")
+    st.stop()
+
 # --- FUNÇÕES DE CONEXÃO E DADOS ---
 @st.cache_data(ttl=5)
 def carregar_dados():
@@ -72,9 +96,14 @@ if submit_button:
     else:
         st.sidebar.warning("Por favor, insira um termo técnico.")
 
+# Botão para Terminar Sessão
+if st.sidebar.button("🚪 Terminar Sessão"):
+    st.session_state.autenticado = False
+    st.rerun()
+
 # --- PAINEL PRINCIPAL ---
 st.title("🛡️ Painel de Inteligência de Ameaças (Cibersegurança)")
-st.markdown("Dashboard corporativo conectado diretamente à base de dados em tempo real (*Supabase*).")
+st.markdown("Dashboard corporativo integrado com segurança, gráficos analíticos e exportação em tempo real (*Supabase*).")
 
 # Carregar dados
 df = carregar_dados()
@@ -121,10 +150,25 @@ if not df.empty:
     if alerta_detectado:
         st.error("🚨 **ALERTA DE SEGURANÇA:** Foram detetados indicadores de ameaças críticas ou vectores maliciosos nos registos filtrados abaixo!")
 
-    # --- TABELA DE DADOS ---
+    # --- GRÁFICOS ANALÍTICOS ---
+    st.markdown("### 📈 Análise Gráfica de Atividade")
+    if "nome_operador" in df_filtrado.columns and not df_filtrado.empty:
+        contagem_operadores = df_filtrado["nome_operador"].value_counts()
+        st.bar_chart(contagem_operadores)
+
+    # --- TABELA DE DADOS E EXPORTAÇÃO ---
     st.markdown("### 📊 Histórico de Pesquisas")
     limite_slider = st.slider("Quantidade de registos a exibir", 5, 50, 10)
     
     st.dataframe(df_filtrado.head(limite_slider), use_container_width=True)
+    
+    # Botão para exportar dados filtrados para CSV
+    csv_dados = df_filtrado.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="📥 Descarregar Dados Filtrados (CSV)",
+        data=csv_dados,
+        file_name="relatorio_ciber_ameacas.csv",
+        mime="text/csv",
+    )
 else:
     st.info("A tabela de dados está vazia ou a carregar...")
