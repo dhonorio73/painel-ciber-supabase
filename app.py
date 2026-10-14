@@ -104,7 +104,7 @@ if st.sidebar.button("🚪 Terminar Sessão"):
 
 # --- PAINEL PRINCIPAL ---
 st.title("🛡️ Painel de Inteligência de Ameaças (Cibersegurança)")
-st.markdown("Dashboard executivo com tabela otimizada, análise gráfica e relatórios limpos.")
+st.markdown("Dashboard executivo com relatórios limpos, estruturados e categorizados por cores de severidade.")
 
 df = carregar_dados()
 
@@ -140,10 +140,19 @@ if not df.empty:
 
     # --- ALERTAS DE SEGURANÇA INTELIGENTES ---
     termos_criticos = ["virus", "ransomware", "zero-day", "malicious", "compromised", "attack"]
-    alerta_detectado = df_filtrado["termo_pesquisado"].str.contains("|".join(termos_criticos), case=False, na=False).any()
+    
+    # Função para classificar o nível de risco/severidade e definir a cor
+    def classificar_risco(termo):
+        if any(c in str(termo).lower() for c in termos_criticos):
+            return "🔴 CRÍTICO"
+        return "🟢 Normal"
+
+    df_filtrado["Severidade"] = df_filtrado["termo_pesquisado"].apply(classificar_risco)
+
+    alerta_detectado = (df_filtrado["Severidade"] == "🔴 CRÍTICO").any()
             
     if alerta_detectado:
-        st.error("🚨 **ALERTA CRÍTICO DE SEGURANÇA:** Foram encontrados vetores de ataque maliciosos ou termos críticos nos registos filtrados abaixo!")
+        st.error("🚨 **ALERTA CRÍTICO DE SEGURANÇA:** Foram encontrados vetores de ataque maliciosos nos registos abaixo!")
     else:
         st.success("✅ **Estado Normal:** Nenhum vetor crítico ativo nos filtros atuais.")
 
@@ -165,41 +174,42 @@ if not df.empty:
             contagem_tempo = df_temporal["data_dia"].value_counts().sort_index()
             st.line_chart(contagem_tempo)
 
-    # --- ORGANIZAÇÃO E FORMATAÇÃO DA TABELA ---
-    st.markdown("### 📊 Histórico Detalhado de Pesquisas")
+    # --- ORGANIZAÇÃO E ESTRUTURAÇÃO DO DATAFRAME/CSV ---
+    st.markdown("### 📊 Histórico Detalhado e Organizado")
     limite_slider = st.slider("Quantidade de registos a exibir na tabela", 5, 50, 10)
     
-    # Organizar, selecionar colunas úteis e excluir a coluna "data_nascimento" (desnecessária)
-    colunas_desejadas = ["id", "data_hora", "nome_operador", "termo_pesquisado"]
-    df_organizado = df_filtrado[[c for c in colunas_desejadas if c in df_filtrado.columns]].copy()
+    # Seleção exata e limpa das colunas desejadas (removendo a data_nascimento inútil)
+    colunas_finais = ["id", "data_hora", "nome_operador", "Severidade", "termo_pesquisado"]
+    df_organizado = df_filtrado[[c for c in colunas_finais if c in df_filtrado.columns]].copy()
     
-    # Renomear colunas para exibição profissional
+    # Renomear os cabeçalhos para português limpo
     df_organizado.rename(columns={
         "id": "ID do Registo",
         "data_hora": "Data e Hora",
         "nome_operador": "Operador",
+        "Severidade": "Nível de Severidade",
         "termo_pesquisado": "Termo Técnico / Ameaça"
     }, inplace=True)
 
-    def colorir_criticos(val):
-        criticos = ["virus", "ransomware", "zero-day", "malicious", "compromised", "attack"]
-        if any(c in str(val).lower() for c in criticos):
-            return 'background-color: rgba(255, 75, 75, 0.2); color: #ff4b4b; font-weight: bold;'
-        return ''
+    # Estilização visual em cores na tabela do Streamlit
+    def colorir_linhas(row):
+        if "CRÍTICO" in str(row["Nível de Severidade"]):
+            return ['background-color: rgba(255, 75, 75, 0.25); color: #ff4b4b; font-weight: bold;'] * len(row)
+        return [''] * len(row)
 
     if not df_organizado.empty:
         df_exibicao = df_organizado.head(limite_slider)
         st.dataframe(
-            df_exibicao.style.map(colorir_criticos, subset=["Termo Técnico / Ameaça"]),
+            df_exibicao.style.apply(colorir_linhas, axis=1),
             use_container_width=True
         )
     
-    # O CSV descarregado também virá limpo e estruturado sem colunas desnecessárias
+    # --- EXPORTAÇÃO CSV LIMPA E ORGANIZADA ---
     csv_dados = df_organizado.to_csv(index=False).encode('utf-8')
     st.download_button(
-        label="📥 Descarregar Relatório Limpo (CSV)",
+        label="📥 Descarregar Relatório CSV Organizado e Colorido",
         data=csv_dados,
-        file_name="relatorio_ciber_organizado.csv",
+        file_name="relatorio_ciber_organizado_severidade.csv",
         mime="text/csv",
     )
 else:
