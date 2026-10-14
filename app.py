@@ -53,7 +53,6 @@ def carregar_dados():
             data = response.json()
             if data:
                 df = pd.DataFrame(data)
-                # Garantir formatação correta das datas
                 if "data_hora" in df.columns:
                     df["data_hora"] = pd.to_datetime(df["data_hora"], errors="coerce")
                 return df
@@ -171,22 +170,20 @@ if not df.empty:
     st.markdown("### 📊 Histórico Detalhado de Pesquisas")
     limite_slider = st.slider("Quantidade de registos a exibir na tabela", 5, 50, 10)
     
-    # Função para colorir linhas com base em termos críticos (destaque visual)
     def colorir_criticos(val):
         criticos = ["virus", "ransomware", "zero-day", "malicious", "compromised", "attack"]
         if any(c in str(val).lower() for c in criticos):
             return 'background-color: rgba(255, 75, 75, 0.2); color: #ff4b4b; font-weight: bold;'
         return ''
 
-    # Aplicar estilização visual na tabela do Streamlit
     if not df_filtrado.empty:
         df_exibicao = df_filtrado.head(limite_slider)
+        # Atualizado de applymap para map para compatibilidade com versões recentes do Pandas/Streamlit
         st.dataframe(
-            df_exibicao.style.applymap(colorir_criticos, subset=["termo_pesquisado"]),
+            df_exibicao.style.map(colorir_criticos, subset=["termo_pesquisado"]),
             use_container_width=True
         )
     
-    # Botão de exportação
     csv_dados = df_filtrado.to_csv(index=False).encode('utf-8')
     st.download_button(
         label="📥 Descarregar Relatório Filtrado (CSV)",
