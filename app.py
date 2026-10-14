@@ -30,7 +30,6 @@ def verificar_autenticacao():
         st.sidebar.subheader("🔒 Acesso Restrito")
         senha_input = st.sidebar.text_input("Palavra-passe corporativa:", type="password")
         if st.sidebar.button("Entrar"):
-            # Senha corporativa configurada
             if senha_input == "ciber2026":
                 st.session_state.autenticado = True
                 st.rerun()
@@ -39,13 +38,12 @@ def verificar_autenticacao():
         return False
     return True
 
-# Interrompe a execução caso não esteja autenticado
 if not verificar_autenticacao():
     st.title("🛡️ Painel de Inteligência de Ameaças (Cibersegurança)")
     st.warning("⚠️ Por favor, introduza a palavra-passe corporativa (`ciber2026`) na barra lateral para aceder ao dashboard.")
     st.stop()
 
-# --- FUNÇÕES DE CONEXÃO E DADOS ---
+# --- FUNÇÕES DE CONEXÃO E LEITURA DE DADOS ---
 @st.cache_data(ttl=5)
 def carregar_dados():
     endpoint = f"{SUPABASE_URL}/rest/v1/historico_pesquisas?select=*&order=id.desc"
@@ -53,7 +51,12 @@ def carregar_dados():
         response = requests.get(endpoint, headers=headers)
         if response.status_code == 200:
             data = response.json()
-            return pd.DataFrame(data) if data else pd.DataFrame()
+            if data:
+                df = pd.DataFrame(data)
+                # Garantir formatação correta das datas
+                if "data_hora" in df.columns:
+                    df["data_hora"] = pd.to_datetime(df["data_hora"], errors="coerce")
+                return df
     except Exception as e:
         st.error(f"Erro ao conectar com o Supabase: {e}")
     return pd.DataFrame()
@@ -77,7 +80,7 @@ def inserir_registo(nome_operador, termo):
     except:
         return False
 
-# --- INTERFACE DO UTILIZADOR (SIDEBAR) ---
+# --- INTERFACE LATERAL ---
 st.sidebar.header("📝 Novo Registo de Ameaça")
 with st.sidebar.form("form_registo"):
     operador = st.text_input("Nome do Operador", value="Analista SOC")
@@ -96,33 +99,32 @@ if submit_button:
     else:
         st.sidebar.warning("Por favor, insira um termo técnico.")
 
-# Botão para Terminar Sessão
 if st.sidebar.button("🚪 Terminar Sessão"):
     st.session_state.autenticado = False
     st.rerun()
 
 # --- PAINEL PRINCIPAL ---
 st.title("🛡️ Painel de Inteligência de Ameaças (Cibersegurança)")
-st.markdown("Dashboard corporativo integrado com segurança, gráficos analíticos e exportação em tempo real (*Supabase*).")
+st.markdown("Dashboard executivo estruturado com análise gráfica, segmentação por cores e auditoria avançada.")
 
-# Carregar dados
+# Carregar dados formatados
 df = carregar_dados()
 
 if not df.empty:
     # --- MÉTRICAS SUPERIORES (KPIs) ---
     total_registos = len(df)
     operadores_unicos = df["nome_operador"].nunique()
-    ultima_atualizacao = df["data_hora"].max() if "data_hora" in df.columns else "N/A"
+    ultima_atualizacao = df["data_hora"].max().strftime("%Y-%m-%d %H:%M:%S") if "data_hora" in df.columns and pd.notnull(df["data_hora"].max()) else "N/A"
     
     col1, col2, col3 = st.columns(3)
-    col1.metric("Total de Ameaças Registadas", total_registos)
-    col2.metric("Operadores Ativos", operadores_unicos)
-    col3.metric("Última Atividade", ultima_atualizacao)
+    col1.metric("📊 Total de Ameaças", total_registos)
+    col2.metric("👥 Operadores Ativos", operadores_unicos)
+    col3.metric("🕒 Última Atividade", ultima_atualizacao)
     
     st.markdown("---")
     
-    # --- FILTROS VISUAIS AVANÇADOS ---
-    st.subheader("🔍 Filtros e Auditoria")
+    # --- FILTROS E AUDITORIA ---
+    st.subheader("🔍 Filtros e Segmentação")
     f_col1, f_col2 = st.columns(2)
     
     with f_col1:
@@ -130,9 +132,8 @@ if not df.empty:
         filtro_operador = st.selectbox("Filtrar por Operador:", operadores_lista)
         
     with f_col2:
-        filtro_termo = st.text_input("Pesquisar palavra-chave nos registos:", "")
+        filtro_termo = st.text_input("Pesquisar palavra-chave:", "")
 
-    # Aplicar filtros
     df_filtrado = df.copy()
     if filtro_operador != "Todos":
         df_filtrado = df_filtrado[df_filtrado["nome_operador"] == filtro_operador]
@@ -140,34 +141,57 @@ if not df.empty:
         df_filtrado = df_filtrado[df_filtrado["termo_pesquisado"].str.contains(filtro_termo, case=False, na=False)]
 
     # --- ALERTAS DE SEGURANÇA INTELIGENTES ---
-    termos_criticos = ["virus", "ransomware", "zero-day", "malicious", "compromised"]
-    alerta_detectado = False
-    for termo in termos_criticos:
-        if df_filtrado["termo_pesquisado"].str.contains(termo, case=False, na=False).any():
-            alerta_detectado = True
-            break
+    termos_criticos = ["virus", "ransomware", "zero-day", "malicious", "compromised", "attack"]
+    alerta_detectado = df_filtrado["termo_pesquisado"].str.contains("|".join(termos_criticos), case=False, na=False).any()
             
     if alerta_detectado:
-        st.error("🚨 **ALERTA DE SEGURANÇA:** Foram detetados indicadores de ameaças críticas ou vectores maliciosos nos registos filtrados abaixo!")
+        st.error("🚨 **ALERTA CRÍTICO DE SEGURANÇA:** Foram encontrados vetores de ataque maliciosos ou termos críticos nos registos filtrados abaixo!")
+    else:
+        st.success("✅ **Estado Normal:** Nenhum vetor crítico ativo nos filtros atuais.")
 
-    # --- GRÁFICOS ANALÍTICOS ---
-    st.markdown("### 📈 Análise Gráfica de Atividade")
-    if "nome_operador" in df_filtrado.columns and not df_filtrado.empty:
-        contagem_operadores = df_filtrado["nome_operador"].value_counts()
-        st.bar_chart(contagem_operadores)
+    # --- GRÁFICOS ANALÍTICOS MULTIDIMENSIONAIS ---
+    st.markdown("### 📈 Análise Gráfica e Desempenho")
+    g_col1, g_col2 = st.columns(2)
+    
+    with g_col1:
+        st.markdown("**Registos por Operador**")
+        if not df_filtrado.empty:
+            contagem_ops = df_filtrado["nome_operador"].value_counts()
+            st.bar_chart(contagem_ops)
+            
+    with g_col2:
+        st.markdown("**Distribuição de Atividade Temporal**")
+        if "data_hora" in df_filtrado.columns:
+            df_temporal = df_filtrado.copy()
+            df_temporal["data_dia"] = pd.to_datetime(df_temporal["data_hora"]).dt.date
+            contagem_tempo = df_temporal["data_dia"].value_counts().sort_index()
+            st.line_chart(contagem_tempo)
 
-    # --- TABELA DE DADOS E EXPORTAÇÃO ---
-    st.markdown("### 📊 Histórico de Pesquisas")
-    limite_slider = st.slider("Quantidade de registos a exibir", 5, 50, 10)
+    # --- ESTRUTURAÇÃO E COLORIZAÇÃO DA TABELA ---
+    st.markdown("### 📊 Histórico Detalhado de Pesquisas")
+    limite_slider = st.slider("Quantidade de registos a exibir na tabela", 5, 50, 10)
     
-    st.dataframe(df_filtrado.head(limite_slider), use_container_width=True)
+    # Função para colorir linhas com base em termos críticos (destaque visual)
+    def colorir_criticos(val):
+        criticos = ["virus", "ransomware", "zero-day", "malicious", "compromised", "attack"]
+        if any(c in str(val).lower() for c in criticos):
+            return 'background-color: rgba(255, 75, 75, 0.2); color: #ff4b4b; font-weight: bold;'
+        return ''
+
+    # Aplicar estilização visual na tabela do Streamlit
+    if not df_filtrado.empty:
+        df_exibicao = df_filtrado.head(limite_slider)
+        st.dataframe(
+            df_exibicao.style.applymap(colorir_criticos, subset=["termo_pesquisado"]),
+            use_container_width=True
+        )
     
-    # Botão para exportar dados filtrados para CSV
+    # Botão de exportação
     csv_dados = df_filtrado.to_csv(index=False).encode('utf-8')
     st.download_button(
-        label="📥 Descarregar Dados Filtrados (CSV)",
+        label="📥 Descarregar Relatório Filtrado (CSV)",
         data=csv_dados,
-        file_name="relatorio_ciber_ameacas.csv",
+        file_name="relatorio_auditoria_ciber.csv",
         mime="text/csv",
     )
 else:
