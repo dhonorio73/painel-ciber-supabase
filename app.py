@@ -104,9 +104,8 @@ if st.sidebar.button("🚪 Terminar Sessão"):
 
 # --- PAINEL PRINCIPAL ---
 st.title("🛡️ Painel de Inteligência de Ameaças (Cibersegurança)")
-st.markdown("Dashboard executivo estruturado com análise gráfica, segmentação por cores e auditoria avançada.")
+st.markdown("Dashboard executivo com tabela otimizada, análise gráfica e relatórios limpos.")
 
-# Carregar dados formatados
 df = carregar_dados()
 
 if not df.empty:
@@ -148,7 +147,7 @@ if not df.empty:
     else:
         st.success("✅ **Estado Normal:** Nenhum vetor crítico ativo nos filtros atuais.")
 
-    # --- GRÁFICOS ANALÍTICOS MULTIDIMENSIONAIS ---
+    # --- GRÁFICOS ANALÍTICOS ---
     st.markdown("### 📈 Análise Gráfica e Desempenho")
     g_col1, g_col2 = st.columns(2)
     
@@ -166,29 +165,41 @@ if not df.empty:
             contagem_tempo = df_temporal["data_dia"].value_counts().sort_index()
             st.line_chart(contagem_tempo)
 
-    # --- ESTRUTURAÇÃO E COLORIZAÇÃO DA TABELA ---
+    # --- ORGANIZAÇÃO E FORMATAÇÃO DA TABELA ---
     st.markdown("### 📊 Histórico Detalhado de Pesquisas")
     limite_slider = st.slider("Quantidade de registos a exibir na tabela", 5, 50, 10)
     
+    # Organizar, selecionar colunas úteis e excluir a coluna "data_nascimento" (desnecessária)
+    colunas_desejadas = ["id", "data_hora", "nome_operador", "termo_pesquisado"]
+    df_organizado = df_filtrado[[c for c in colunas_desejadas if c in df_filtrado.columns]].copy()
+    
+    # Renomear colunas para exibição profissional
+    df_organizado.rename(columns={
+        "id": "ID do Registo",
+        "data_hora": "Data e Hora",
+        "nome_operador": "Operador",
+        "termo_pesquisado": "Termo Técnico / Ameaça"
+    }, inplace=True)
+
     def colorir_criticos(val):
         criticos = ["virus", "ransomware", "zero-day", "malicious", "compromised", "attack"]
         if any(c in str(val).lower() for c in criticos):
             return 'background-color: rgba(255, 75, 75, 0.2); color: #ff4b4b; font-weight: bold;'
         return ''
 
-    if not df_filtrado.empty:
-        df_exibicao = df_filtrado.head(limite_slider)
-        # Atualizado de applymap para map para compatibilidade com versões recentes do Pandas/Streamlit
+    if not df_organizado.empty:
+        df_exibicao = df_organizado.head(limite_slider)
         st.dataframe(
-            df_exibicao.style.map(colorir_criticos, subset=["termo_pesquisado"]),
+            df_exibicao.style.map(colorir_criticos, subset=["Termo Técnico / Ameaça"]),
             use_container_width=True
         )
     
-    csv_dados = df_filtrado.to_csv(index=False).encode('utf-8')
+    # O CSV descarregado também virá limpo e estruturado sem colunas desnecessárias
+    csv_dados = df_organizado.to_csv(index=False).encode('utf-8')
     st.download_button(
-        label="📥 Descarregar Relatório Filtrado (CSV)",
+        label="📥 Descarregar Relatório Limpo (CSV)",
         data=csv_dados,
-        file_name="relatorio_auditoria_ciber.csv",
+        file_name="relatorio_ciber_organizado.csv",
         mime="text/csv",
     )
 else:
