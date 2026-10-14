@@ -12,7 +12,7 @@ st.set_page_config(
 
 # --- CREDENCIAIS DO SUPABASE ---
 SUPABASE_URL = "https://sonjvqvaithtpzrqbolf.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJz dXBhYmFzZSIsInJlZiI6InNvbmp2cXZhaXRodHB6cnFib2xmIi wicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3MzI0NzQsImV4cCI6 MjEwNzMwODQ3NH0.U30fYDFbG418bDzY7ampcy30ZiVun7DBr4 T7FjKchPg"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvbmp2cXZhaXRodHB6cnFib2xmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3MzI0NzQsImV4cCI6MjEwNzMwODQ3NH0.U30fYDFbG418bDzY7ampcy30ZiVun7DBr4T7FjKchPg"
 
 headers = {
     "apikey": SUPABASE_KEY,
@@ -44,7 +44,7 @@ if not verificar_autenticacao():
     st.stop()
 
 # --- FUNÇÕES DE CONEXÃO E LEITURA DE DADOS ---
-@st.cache_data(ttl=5)
+@st.cache_data(ttl=2)
 def carregar_dados():
     endpoint = f"{SUPABASE_URL}/rest/v1/historico_pesquisas?select=*&order=id.desc"
     try:
@@ -56,8 +56,12 @@ def carregar_dados():
                 if "data_hora" in df.columns:
                     df["data_hora"] = pd.to_datetime(df["data_hora"], errors="coerce")
                 return df
+            else:
+                return pd.DataFrame() # Retorna DataFrame vazio se não houver dados
+        else:
+            st.error(f"Erro na API do Supabase (Código {response.status_code}): {response.text}")
     except Exception as e:
-        st.error(f"Erro ao conectar com o Supabase: {e}")
+        st.error(f"Erro de conexão: {e}")
     return pd.DataFrame()
 
 def inserir_registo(nome_operador, termo):
@@ -76,7 +80,8 @@ def inserir_registo(nome_operador, termo):
     try:
         response = requests.post(endpoint, headers=headers, json=payload)
         return response.status_code in [200, 201]
-    except:
+    except Exception as e:
+        st.error(f"Erro ao inserir: {e}")
         return False
 
 # --- INTERFACE LATERAL ---
@@ -104,14 +109,14 @@ if st.sidebar.button("🚪 Terminar Sessão"):
 
 # --- PAINEL PRINCIPAL ---
 st.title("🛡️ Painel de Inteligência de Ameaças (Cibersegurança)")
-st.markdown("Dashboard executivo com relatórios estruturados, seguros e compatíveis com folhas de cálculo.")
+st.markdown("Dashboard executivo com relatórios estruturados e ligação direta ao Supabase.")
 
 df = carregar_dados()
 
-if not df.empty:
+if not df.empty and "termo_pesquisado" in df.columns:
     # --- MÉTRICAS SUPERIORES (KPIs) ---
     total_registos = len(df)
-    operadores_unicos = df["nome_operador"].nunique()
+    operadores_unicos = df["nome_operador"].nunique() if "nome_operador" in df.columns else 0
     ultima_atualizacao = df["data_hora"].max().strftime("%Y-%m-%d %H:%M:%S") if "data_hora" in df.columns and pd.notnull(df["data_hora"].max()) else "N/A"
     
     col1, col2, col3 = st.columns(3)
@@ -126,7 +131,7 @@ if not df.empty:
     f_col1, f_col2 = st.columns(2)
     
     with f_col1:
-        operadores_lista = ["Todos"] + list(df["nome_operador"].unique())
+        operadores_lista = ["Todos"] + list(df["nome_operador"].unique()) if "nome_operador" in df.columns else ["Todos"]
         filtro_operador = st.selectbox("Filtrar por Operador:", operadores_lista)
         
     with f_col2:
@@ -161,7 +166,7 @@ if not df.empty:
     
     with g_col1:
         st.markdown("**Registos por Operador**")
-        if not df_filtrado.empty:
+        if not df_filtrado.empty and "nome_operador" in df_filtrado.columns:
             contagem_ops = df_filtrado["nome_operador"].value_counts()
             st.bar_chart(contagem_ops)
             
@@ -200,8 +205,8 @@ if not df.empty:
             use_container_width=True
         )
     
-    # --- EXPORTAÇÃO CSV CORRIGIDA E SEPARADA POR VÍRGULA NATIVA ---
-    csv_string = df_organizado.to_csv(index=False, sep=',', encoding='utf-8-sig')
+    # --- EXPORTAÇÃO CSV ---
+    csv_string = df_organizado.to_csv(index=False, encoding='utf-8-sig')
     
     st.download_button(
         label="📥 Descarregar Relatório CSV Organizado",
@@ -210,4 +215,4 @@ if not df.empty:
         mime="text/csv",
     )
 else:
-    st.info("A tabela de dados está vazia ou a carregar...")
+    st.info("ℹ️ A tabela de dados no Supabase está vazia ou a carregar. Utilize o formulário na barra lateral para inserir o primeiro registo técnico.")
