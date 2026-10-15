@@ -107,24 +107,31 @@ def carregar_dados():
         st.error(f"Erro de conexão com o banco de dados: {e}")
         return pd.DataFrame()
 
-# --- CABEÇALHO DO PAINEL (ESTILO DASHBOARD DE INFRAESTRUTURA) ---
+# --- CABEÇALHO DO PAINEL ---
 st.markdown("### ⚡ Supabase Observability & Threat Telemetry")
-st.markdown("Painel de controlo em tempo real integrado ao cluster de produção.")
+st.markdown("Painel de controlo corporativo em tempo real integrado ao cluster de produção.")
 
 df_dados = carregar_dados()
 
 if not df_dados.empty:
-    # --- BARRA LATERAL ---
+    # --- BARRA LATERAL DE FILTROS ---
     st.sidebar.markdown("---")
     st.sidebar.subheader("⚙️ Filtros de Fleet")
     
+    # Filtro por Operador
     operadores_disponiveis = ["Todos"] + list(df_dados["nome_operador"].dropna().unique()) if "nome_operador" in df_dados.columns else ["Todos"]
     operador_selecionado = st.sidebar.selectbox("Filtrar por Operador:", operadores_disponiveis)
-    
     if operador_selecionado != "Todos":
         df_dados = df_dados[df_dados["nome_operador"] == operador_selecionado]
 
-    # --- MÉTRICAS EXECUTIVAS (ESTILO CARDS DE MONITOR) ---
+    # Filtro por Departamento (caso a coluna exista na tabela)
+    if "departamento" in df_dados.columns:
+        departamentos_disponiveis = ["Todos"] + list(df_dados["departamento"].dropna().unique())
+        departamento_selecionado = st.sidebar.selectbox("Filtrar por Departamento:", departamentos_disponiveis)
+        if departamento_selecionado != "Todos":
+            df_dados = df_dados[df_dados["departamento"] == departamento_selecionado]
+
+    # --- MÉTRICAS EXECUTIVAS (CARDS) ---
     total_registros = len(df_dados)
     operadores_unicos = df_dados["nome_operador"].nunique() if "nome_operador" in df_dados.columns else 0
 
@@ -175,7 +182,7 @@ if not df_dados.empty:
 
     # --- TABELA DE LOGS DETALHADA ---
     st.subheader("📋 Query Telemetry Logs & Activity Stream")
-    filtro_pesquisa = st.text_input("🔍 Search Query Logs:", placeholder="Filtrar por termos, operador ou carimbo temporal...")
+    filtro_pesquisa = st.text_input("🔍 Search Query Logs:", placeholder="Filtrar por termos, operador, departamento ou carimbo temporal...")
     
     if filtro_pesquisa:
         mask = df_dados.astype(str).apply(lambda x: x.str.contains(filtro_pesquisa, case=False)).any(axis=1)
