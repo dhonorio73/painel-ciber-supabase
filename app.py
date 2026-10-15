@@ -1,82 +1,71 @@
-<!DOCTYPE html>
-<html lang="pt">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Douglas Honório | Portfólio</title>
-    <style>
-        * {margin: 0; padding: 0; box-sizing: border-box; font-family: 'Courier New', Courier, monospace;}
-        body {background-color: #0d1117; color: #c9d1d9; overflow-x: hidden;}
-        canvas {position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;}
-        .container {max-width: 900px; margin: 50px auto; padding: 30px; background: rgba(13, 17, 23, 0.85); border: 1px solid #30363d; border-radius: 8px; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);}
-        header h1 {color: #58a6ff; font-size: 2.5rem; margin-bottom: 10px;}
-        header p {color: #8b949e; font-size: 1.1rem; margin-bottom: 20px;}
-        section {margin-top: 30px;}
-        h2 {color: #58a6ff; border-bottom: 1px solid #30363d; padding-bottom: 5px; margin-bottom: 15px;}
-        ul {list-style-type: none; padding-left: 0;}
-        li {padding: 8px 0; border-bottom: 1px dashed #21262d;}
-        a {color: #58a6ff; text-decoration: none;}
-        a:hover {text-decoration: underline;}
-    </style>
-</head>
-<body>
-    <canvas id="matrix-canvas"></canvas>
-    <div class="container">
-        <header>
-            <h1>Douglas Honório</h1>
-            <p>Desenvolvedor Backend & Cibersegurança</p>
-        </header>
-        <section>
-            <h2>Sobre Mim</h2>
-            <p>Estudante de Cibersegurança na Faculdade Anhanguera, focado em desenvolvimento backend, criptografia, automação com Python e análise de dados defensivos. Possui formação em Programação em Python, além dos cursos de Introdução à Programação Python pelo Santander e Introdução à Cibersegurança pela Cisco.</p>
-        </section>
-        <section>
-            <h2>Tecnologias & Ferramentas</h2>
-            <ul>
-                <li><strong>Linguagens:</strong> Python (Flask, Streamlit, Pandas, Scikit-Learn)</li>
-                <li><strong>Segurança:</strong> Criptografia Fernet, SHA-256, Hashlib</li>
-                <li><strong>Base de Dados:</strong> Supabase, PostgreSQL, Normalização (1FN/2FN)</li>
-                <li><strong>Controlo de Versão:</strong> Git & GitHub</li>
-            </ul>
-        </section>
-        <section>
-            <h2>Projetos em Destaque</h2>
-            <ul>
-                <li><a href="https://painel-ciber-supabase-lgeyn7zzphlichhycpfqkb.streamlit.app/" target="_blank">Painel de Observabilidade e Cibersegurança (Streamlit)</a></li>
-            </ul>
-        </section>
-    </div>
-    <script>
-        const canvas = document.getElementById('matrix-canvas');
-        const ctx = canvas.getContext('2d');
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-        const letters = '01ABCDEFGHIJKLMNOPQRSTUVWXYZ@#$%&*';
-        const fontSize = 16;
-        let columns = canvas.width / fontSize;
-        const drops = [];
-        for (let x = 0; x < columns; x++) {
-            drops[x] = 1;
-        }
-        function drawMatrix() {
-            ctx.fillStyle = 'rgba(13, 17, 23, 0.05)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#00ff66';
-            ctx.font = fontSize + 'px monospace';
-            for (let i = 0; i < drops.length; i++) {
-                const text = letters.charAt(Math.floor(Math.random() * letters.length));
-                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-                    drops[i] = 0;
-                }
-                drops[i]++;
-            }
-        }
-        setInterval(drawMatrix, 35);
-    </script>
-</body>
-</html>
+import streamlit as st
+import pandas as pd
+
+# --- CONFIGURAÇÃO DA PÁGINA ---
+st.set_page_config(
+    page_title="Enterprise Threat Intelligence",
+    page_icon="⚡",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# --- DADOS ESTÁTICOS ---
+dados = [
+    {"id": 1, "nome_operador": "Ana Silva", "registro_funcionario": "101", "data_nascimento": "12/03/1992", "termo_pesquisado": "Análise de vulnerabilidades CVE-2026", "data_hora": "2026-10-01 09:15:22", "departamento": "Segurança da Informação"},
+    {"id": 2, "nome_operador": "Carlos Mendes", "registro_funcionario": "102", "data_nascimento": "22/07/1988", "termo_pesquisado": "Configuração de Firewall corporativo", "data_hora": "2026-10-02 11:30:45", "departamento": "Infraestrutura e Redes"},
+    {"id": 3, "nome_operador": "Beatriz Costa", "registro_funcionario": "103", "data_nascimento": "05/11/1995", "termo_pesquisado": "Auditoria de conformidade LGPD", "data_hora": "2026-10-03 14:10:00", "departamento": "Compliance"},
+    {"id": 4, "nome_operador": "Marcos Oliveira", "registro_funcionario": "104", "data_nascimento": "14/02/1990", "termo_pesquisado": "Python Flask API endpoints security", "data_hora": "2026-10-04 16:20:11", "departamento": "Desenvolvimento / TI"},
+    {"id": 5, "nome_operador": "Ana Silva", "registro_funcionario": "101", "data_nascimento": "12/03/1992", "termo_pesquisado": "Mitigação de ataques DDoS", "data_hora": "2026-10-05 08:45:33", "departamento": "Segurança da Informação"},
+    {"id": 6, "nome_operador": "Juliana Rocha", "registro_funcionario": "105", "data_nascimento": "30/09/1993", "termo_pesquisado": "Gestão de acessos IAM Supabase", "data_hora": "2026-10-06 10:05:50", "departamento": "Governança de Dados"},
+    {"id": 7, "nome_operador": "Carlos Mendes", "registro_funcionario": "102", "data_nascimento": "22/07/1988", "termo_pesquisado": "Relatório de incidentes críticos", "data_hora": "2026-10-07 13:22:19", "departamento": "Infraestrutura e Redes"},
+    {"id": 8, "nome_operador": "Lucas Pereira", "registro_funcionario": "106", "data_nascimento": "18/12/1991", "termo_pesquisado": "Centro de Operações (SOC)", "data_hora": "2026-10-08 17:50:02", "departamento": "Centro de Operações (SOC)"},
+    {"id": 9, "nome_operador": "Beatriz Costa", "registro_funcionario": "103", "data_nascimento": "05/11/1995", "termo_pesquisado": "Termos de uso e privacidade", "data_hora": "2026-10-09 09:33:40", "departamento": "Compliance"},
+    {"id": 10, "nome_operador": "Marcos Oliveira", "registro_funcionario": "104", "data_nascimento": "14/02/1990", "termo_pesquisado": "Criptografia Fernet e SHA-256", "data_hora": "2026-10-10 11:12:04", "departamento": "Desenvolvimento / TI"}
+]
+
+df_dados = pd.DataFrame(dados)
+
+# --- CABEÇALHO ---
+st.markdown("### ⚡ Supabase Observability & Threat Telemetry")
+st.markdown("Painel de controlo corporativo em tempo real integrado ao cluster de produção.")
+st.sidebar.markdown("---")
+
+# --- FILTROS NA BARRA LATERAL ---
+st.sidebar.subheader("⚙️ Filtros de Fleet")
+
+operadores = ["Todos"] + list(df_dados["nome_operador"].dropna().unique())
+op_sel = st.sidebar.selectbox("Filtrar por Operador:", operadores)
+
+deptos = ["Todos"] + list(df_dados["departamento"].dropna().unique())
+dept_sel = st.sidebar.selectbox("Filtrar por Departamento:", deptos)
+
+if op_sel != "Todos":
+    df_dados = df_dados[df_dados["nome_operador"] == op_sel]
+
+if dept_sel != "Todos":
+    df_dados = df_dados[df_dados["departamento"] == dept_sel]
+
+# --- MÉTRICAS ---
+total_reg = len(df_dados)
+ops_unicos = df_dados["nome_operador"].nunique()
+ultima = df_dados["data_hora"].max() if not df_dados.empty else "N/A"
+
+c1, c2, c3, c4 = st.columns(4)
+
+with c1:
+    st.metric(label="TOTAL QUERIES", value=total_reg)
+
+with c2:
+    st.metric(label="ÚLTIMO EVENTO", value=ultima)
+
+with c3:
+    st.metric(label="ACTIVE OPERATORS", value=ops_unicos)
+
+with c4:
+    st.metric(label="DATABASE STATUS", value="🟢 Online")
+
+st.markdown("---")
+
+# --- TABELA ---
+st.subheader("📋 Registo de Atividades e Pesquisas")
+st.dataframe(df_dados, use_container_width=True)
