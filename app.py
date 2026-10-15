@@ -1,9 +1,8 @@
 import streamlit as st
 import pandas as pd
-import requests
 import datetime
 
-# --- CONFIGURAÇÃO DA PÁGINA (ESTILO MONITORAMENTO) ---
+# --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(
     page_title="Enterprise Threat Intelligence Dashboard",
     page_icon="⚡",
@@ -11,61 +10,24 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- ESTILIZAÇÃO CUSTOMIZADA (TEMA DARK / DATADOG STYLE) ---
+# --- ESTILIZAÇÃO CUSTOMIZADA ---
 st.markdown("""
 <style>
-    .main {
-        background-color: #0f172a;
-    }
+    .main { background-color: #0f172a; }
     .metric-card {
         background-color: #1e293b;
         border: 1px solid #334155;
         border-top: 3px solid #3b82f6;
         padding: 16px;
         border-radius: 6px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
     }
-    .metric-title {
-        color: #94a3b8;
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-    }
-    .metric-value {
-        color: #f8fafc;
-        font-size: 24px;
-        font-weight: 700;
-        margin-top: 4px;
-    }
-    .status-badge {
-        background-color: rgba(34, 197, 94, 0.15);
-        color: #22c55e;
-        padding: 4px 10px;
-        border-radius: 4px;
-        font-weight: 600;
-        font-size: 13px;
-        border: 1px solid rgba(34, 197, 94, 0.3);
-    }
+    .metric-title { color: #94a3b8; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .metric-value { color: #f8fafc; font-size: 24px; font-weight: 700; margin-top: 4px; }
+    .status-badge { background-color: rgba(34, 197, 94, 0.15); color: #22c55e; padding: 4px 10px; border-radius: 4px; font-weight: 600; font-size: 13px; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- CREDENCIAIS SEGURAS DO SUPABASE ---
-try:
-    SUPABASE_URL = st.secrets["SUPABASE_URL"]
-    SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
-except Exception:
-    SUPABASE_URL = ""
-    SUPABASE_KEY = ""
-
-headers = {
-    "apikey": SUPABASE_KEY,
-    "Authorization": f"Bearer {SUPABASE_KEY}",
-    "Content-Type": "application/json",
-    "Prefer": "return=representation"
-}
-
-# --- SISTEMA DE AUTENTICAÇÃO CORPORATIVA ---
+# --- AUTENTICAÇÃO ---
 def verificar_autenticacao():
     if "autenticado" not in st.session_state:
         st.session_state.autenticado = False
@@ -87,124 +49,79 @@ if not verificar_autenticacao():
     st.warning("⚠️ Acesso restrito. Introduza a chave corporativa de autenticação na barra lateral (`ciber2026`).")
     st.stop()
 
-# --- CARREGAR DADOS DO SUPABASE ---
-@st.cache_data(ttl=5)
-def carregar_dados():
-    if not SUPABASE_URL or not SUPABASE_KEY:
-        return pd.DataFrame()
-    endpoint = f"{SUPABASE_URL}/rest/v1/historico_pesquisas?select=*&order=id.desc"
-    try:
-        response = requests.get(endpoint, headers=headers, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            if data:
-                df = pd.DataFrame(data)
-                if "data_hora" in df.columns:
-                    df["data_hora"] = pd.to_datetime(df["data_hora"], errors="coerce")
-                return df
-        return pd.DataFrame()
-    except Exception as e:
-        st.error(f"Erro de conexão com o banco de dados: {e}")
-        return pd.DataFrame()
+# --- DADOS ESTÁTICOS INTEGRADOS ---
+dados = [
+    {"id": 1, "nome_operador": "Ana Silva", "registro_funcionario": "101", "data_nascimento": "12/03/1992", "termo_pesquisado": "Análise de vulnerabilidades CVE-2026", "data_hora": "2026-10-01 09:15:22", "departamento": "Segurança da Informação"},
+    {"id": 2, "nome_operador": "Carlos Mendes", "registro_funcionario": "102", "data_nascimento": "22/07/1988", "termo_pesquisado": "Configuração de Firewall corporativo", "data_hora": "2026-10-02 11:30:45", "departamento": "Infraestrutura e Redes"},
+    {"id": 3, "nome_operador": "Beatriz Costa", "registro_funcionario": "103", "data_nascimento": "05/11/1995", "termo_pesquisado": "Auditoria de conformidade LGPD", "data_hora": "2026-10-03 14:10:00", "departamento": "Compliance"},
+    {"id": 4, "nome_operador": "Marcos Oliveira", "registro_funcionario": "104", "data_nascimento": "14/02/1990", "termo_pesquisado": "Python Flask API endpoints security", "data_hora": "2026-10-04 16:20:11", "departamento": "Desenvolvimento / TI"},
+    {"id": 5, "nome_operador": "Ana Silva", "registro_funcionario": "101", "data_nascimento": "12/03/1992", "termo_pesquisado": "Mitigação de ataques DDoS", "data_hora": "2026-10-05 08:45:33", "departamento": "Segurança da Informação"},
+    {"id": 6, "nome_operador": "Juliana Rocha", "registro_funcionario": "105", "data_nascimento": "30/09/1993", "termo_pesquisado": "Gestão de acessos IAM Supabase", "data_hora": "2026-10-06 10:05:50", "departamento": "Governança de Dados"},
+    {"id": 7, "nome_operador": "Carlos Mendes", "registro_funcionario": "102", "data_nascimento": "22/07/1988", "termo_pesquisado": "Análise de logs de intrusão", "data_hora": "2026-10-07 13:22:19", "departamento": "Infraestrutura e Redes"},
+    {"id": 8, "nome_operador": "Lucas Pereira", "registro_funcionario": "106", "data_nascimento": "18/12/1991", "termo_pesquisado": "Relatório de incidentes críticos", "data_hora": "2026-10-08 17:50:02", "departamento": "Centro de Operações (SOC)"},
+    {"id": 9, "nome_operador": "Beatriz Costa", "registro_funcionario": "103", "data_nascimento": "05/11/1995", "termo_pesquisado": "Termos de uso e privacidade", "data_hora": "2026-10-09 09:33:40", "departamento": "Compliance"},
+    {"id": 10, "nome_operador": "Marcos Oliveira", "registro_funcionario": "104", "data_nascimento": "14/02/1990", "termo_pesquisado": "Criptografia Fernet e SHA-256", "data_hora": "2026-10-10 15:12:04", "departamento": "Desenvolvimento / TI"}
+]
 
-# --- CABEÇALHO DO PAINEL ---
+df_dados = pd.DataFrame(dados)
+
+# --- CABEÇALHO ---
 st.markdown("### ⚡ Supabase Observability & Threat Telemetry")
 st.markdown("Painel de controlo corporativo em tempo real integrado ao cluster de produção.")
 
-df_dados = carregar_dados()
+# --- FILTROS NA BARRA LATERAL ---
+st.sidebar.markdown("---")
+st.sidebar.subheader("⚙️ Filtros de Fleet")
 
-if not df_dados.empty:
-    # --- BARRA LATERAL DE FILTROS E EXPORTAÇÃO ---
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("⚙️ Filtros de Fleet")
-    
-    # Filtro por Operador
-    operadores_disponiveis = ["Todos"] + list(df_dados["nome_operador"].dropna().unique()) if "nome_operador" in df_dados.columns else ["Todos"]
-    operador_selecionado = st.sidebar.selectbox("Filtrar por Operador:", operadores_disponiveis)
-    if operador_selecionado != "Todos":
-        df_dados = df_dados[df_dados["nome_operador"] == operador_selecionado]
+operadores = ["Todos"] + list(df_dados["nome_operador"].dropna().unique())
+op_sel = st.sidebar.selectbox("Filtrar por Operador:", operadores)
+if op_sel != "Todos":
+    df_dados = df_dados[df_dados["nome_operador"] == op_sel]
 
-    # Filtro por Departamento (caso a coluna exista na tabela)
-    if "departamento" in df_dados.columns:
-        departamentos_disponiveis = ["Todos"] + list(df_dados["departamento"].dropna().unique())
-        departamento_selecionado = st.sidebar.selectbox("Filtrar por Departamento:", departamentos_disponiveis)
-        if departamento_selecionado != "Todos":
-            df_dados = df_dados[df_dados["departamento"] == departamento_selecionado]
+deptos = ["Todos"] + list(df_dados["departamento"].dropna().unique())
+dept_sel = st.sidebar.selectbox("Filtrar por Departamento:", deptos)
+if dept_sel != "Todos":
+    df_dados = df_dados[df_dados["departamento"] == dept_sel]
 
-    # --- MÉTRICAS EXECUTIVAS (CARDS) ---
-    total_registros = len(df_dados)
-    operadores_unicos = df_dados["nome_operador"].nunique() if "nome_operador" in df_dados.columns else 0
+# --- MÉTRICAS ---
+total_reg = len(df_dados)
+ops_unicos = df_dados["nome_operador"].nunique()
 
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-title">Total Queries (Fleet)</div>
-                <div class="metric-value">{total_registros}</div>
-            </div>
-        """, unsafe_allow_html=True)
-    with col2:
-        ultima_data = "N/A"
-        if "data_hora" in df_dados.columns and not df_dados["data_hora"].isna().all():
-            ultima_data = df_dados["data_hora"].max().strftime("%d/%m/%Y %H:%M")
-        st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-title">Último Evento Registado</div>
-                <div class="metric-value" style="font-size: 18px; margin-top: 8px;">{ultima_data}</div>
-            </div>
-        """, unsafe_allow_html=True)
-    with col3:
-        st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-title">Active Operators</div>
-                <div class="metric-value">{operadores_unicos}</div>
-            </div>
-        """, unsafe_allow_html=True)
-    with col4:
-        st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-title">Database Status</div>
-                <div class="metric-value" style="margin-top: 6px;"><span class="status-badge">ONLINE 🟢</span></div>
-            </div>
-        """, unsafe_allow_html=True)
+c1, c2, c3, c4 = st.columns(4)
+with c1:
+    st.markdown(f'<div class="metric-card"><div class="metric-title">Total Queries</div><div class="metric-value">{total_reg}</div></div>', unsafe_allow_html=True)
+with c2:
+    ultima = df_dados["data_hora"].max()
+    st.markdown(f'<div class="metric-card"><div class="metric-title">Último Evento</div><div class="metric-value" style="font-size:16px; margin-top:8px;">{ultima}</div></div>', unsafe_allow_html=True)
+with c3:
+    st.markdown(f'<div class="metric-card"><div class="metric-title">Active Operators</div><div class="metric-value">{ops_unicos}</div></div>', unsafe_allow_html=True)
+with c4:
+    st.markdown(f'<div class="metric-card"><div class="metric-title">Database Status</div><div class="metric-value" style="margin-top:6px;"><span class="status-badge">ONLINE 🟢</span></div></div>', unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("<br>", unsafe_allow_html=True)
 
-    # --- GRÁFICO DE TELEMETRIA TEMPORAL ---
-    if "data_hora" in df_dados.columns and not df_dados["data_hora"].isna().all():
-        st.subheader("📊 Query Throughput by Timeline")
-        df_chart = df_dados.copy()
-        df_chart["data_dia"] = df_chart["data_hora"].dt.date
-        counts_por_dia = df_chart.groupby("data_dia").size().reset_index(name="quantidade")
-        st.bar_chart(counts_por_dia.set_index("data_dia"), color="#3b82f6")
+# --- TABELA E EXPORTAÇÃO ---
+st.subheader("📋 Query Telemetry Logs & Activity Stream")
 
-    st.divider()
+col_p, col_b = st.columns([3, 1])
+with col_p:
+    pesquisa = st.text_input("🔍 Search Query Logs:", placeholder="Filtrar por termos, operador ou departamento...")
 
-    # --- TABELA DE LOGS DETALHADA E EXPORTAÇÃO ---
-    st.subheader("📋 Query Telemetry Logs & Activity Stream")
-    
-    col_pesq, col_btn = st.columns([3, 1])
-    with col_pesq:
-        filtro_pesquisa = st.text_input("🔍 Search Query Logs:", placeholder="Filtrar por termos, operador, departamento ou carimbo temporal...")
-    
-    if filtro_pesquisa:
-        mask = df_dados.astype(str).apply(lambda x: x.str.contains(filtro_pesquisa, case=False)).any(axis=1)
-        df_exibicao = df_dados[mask]
-    else:
-        df_exibicao = df_dados
-
-    # Botão de Download Organizado em Excel / CSV
-    with col_btn:
-        st.markdown("<br>", unsafe_allow_html=True)
-        csv_data = df_exibicao.to_csv(index=False, encoding="utf-8-sig")
-        st.download_button(
-            label="📥 Descarregar Excel/CSV",
-            data=csv_data,
-            file_name=f"relatorio_telemetria_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-            mime="text/csv",
-            use_container_width=True
-        )
-
-    st.dataframe(df_exibicao, use_container_width=True)
+if pesquisa:
+    mask = df_dados.astype(str).apply(lambda x: x.str.contains(pesquisa, case=False)).any(axis=1)
+    df_exibicao = df_dados[mask]
 else:
-    st.info("ℹ️ A aguardar fluxo de dados na base de dados Supabase...")
+    df_exibicao = df_dados
+
+with col_b:
+    st.markdown("<br>", unsafe_allow_html=True)
+    csv = df_exibicao.to_csv(index=False, encoding="utf-8-sig")
+    st.download_button(
+        label="📥 Descarregar Excel/CSV",
+        data=csv,
+        file_name=f"telemetria_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
+
+st.dataframe(df_exibicao, use_container_width=True)
