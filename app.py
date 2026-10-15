@@ -42,12 +42,10 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- CREDENCIAIS SEGURAS DO SUPABASE ---
-# Configurado para buscar no st.secrets (garanta que o secrets.toml esteja configurado)
 try:
     SUPABASE_URL = st.secrets["SUPABASE_URL"]
     SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 except Exception:
-    # Fallback de segurança ou aviso caso o secrets não esteja configurado localmente
     SUPABASE_URL = ""
     SUPABASE_KEY = ""
 
@@ -102,3 +100,61 @@ def carregar_dados():
     except Exception as e:
         st.error(f"Erro ao conectar com o Supabase: {e}")
         return pd.DataFrame()
+
+# --- CORPO PRINCIPAL DO DASHBOARD ---
+st.title("🛡️ Enterprise Threat Intelligence Dashboard")
+st.markdown("Painel de monitoramento e registo de pesquisas integrado ao Supabase.")
+
+# Carregar os dados
+df_dados = carregar_dados()
+
+if not df_dados.empty:
+    # --- MÉTRICAS DE RESUMO ---
+    total_registros = len(df_dados)
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-title">Total de Registros</div>
+                <div class="metric-value">{total_registros}</div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+    with col2:
+        ultima_data = "N/A"
+        if "data_hora" in df_dados.columns and not df_dados["data_hora"].isna().all():
+            ultima_data = df_dados["data_hora"].max().strftime("%d/%m/%Y %H:%M")
+        st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-title">Última Atividade</div>
+                <div class="metric-value">{ultima_data}</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    with col3:
+        st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-title">Status da Conexão</div>
+                <div class="metric-value" style="color: #22c55e;">Ativo 🟢</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    st.divider()
+
+    # --- TABELA DE DADOS ---
+    st.subheader("📋 Histórico Detalhado")
+    
+    filtro_pesquisa = st.text_input("🔍 Pesquisar nos registros:", placeholder="Digite para filtrar...")
+    
+    if filtro_pesquisa:
+        mask = df_dados.astype(str).apply(lambda x: x.str.contains(filtro_pesquisa, case=False)).any(axis=1)
+        df_exibicao = df_dados[mask]
+    else:
+        df_exibicao = df_dados
+
+    st.dataframe(df_exibicao, use_container_width=True)
+
+else:
+    st.info("ℹ️ Nenhum dado encontrado na tabela `historico_pesquisas` do Supabase ou aguardando conexão.")
