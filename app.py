@@ -114,7 +114,7 @@ st.markdown("Painel de controlo corporativo em tempo real integrado ao cluster d
 df_dados = carregar_dados()
 
 if not df_dados.empty:
-    # --- BARRA LATERAL DE FILTROS ---
+    # --- BARRA LATERAL DE FILTROS E EXPORTAÇÃO ---
     st.sidebar.markdown("---")
     st.sidebar.subheader("⚙️ Filtros de Fleet")
     
@@ -180,15 +180,30 @@ if not df_dados.empty:
 
     st.divider()
 
-    # --- TABELA DE LOGS DETALHADA ---
+    # --- TABELA DE LOGS DETALHADA E EXPORTAÇÃO ---
     st.subheader("📋 Query Telemetry Logs & Activity Stream")
-    filtro_pesquisa = st.text_input("🔍 Search Query Logs:", placeholder="Filtrar por termos, operador, departamento ou carimbo temporal...")
+    
+    col_pesq, col_btn = st.columns([3, 1])
+    with col_pesq:
+        filtro_pesquisa = st.text_input("🔍 Search Query Logs:", placeholder="Filtrar por termos, operador, departamento ou carimbo temporal...")
     
     if filtro_pesquisa:
         mask = df_dados.astype(str).apply(lambda x: x.str.contains(filtro_pesquisa, case=False)).any(axis=1)
         df_exibicao = df_dados[mask]
     else:
         df_exibicao = df_dados
+
+    # Botão de Download Organizado em Excel / CSV
+    with col_btn:
+        st.markdown("<br>", unsafe_allow_html=True)
+        csv_data = df_exibicao.to_csv(index=False, encoding="utf-8-sig")
+        st.download_button(
+            label="📥 Descarregar Excel/CSV",
+            data=csv_data,
+            file_name=f"relatorio_telemetria_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
 
     st.dataframe(df_exibicao, use_container_width=True)
 else:
