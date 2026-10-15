@@ -3,37 +3,49 @@ import pandas as pd
 import requests
 import datetime
 
-# --- CONFIGURAÇÃO PREMIUM DA PÁGINA ---
+# --- CONFIGURAÇÃO DA PÁGINA (ESTILO MONITORAMENTO) ---
 st.set_page_config(
     page_title="Enterprise Threat Intelligence Dashboard",
-    page_icon="🛡️",
+    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# --- ESTILIZAÇÃO CUSTOMIZADA (CSS PREMIUM) ---
+# --- ESTILIZAÇÃO CUSTOMIZADA (TEMA DARK / DATADOG STYLE) ---
 st.markdown("""
 <style>
+    .main {
+        background-color: #0f172a;
+    }
     .metric-card {
         background-color: #1e293b;
-        border-left: 5px solid #3b82f6;
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        margin-bottom: 10px;
+        border: 1px solid #334155;
+        border-top: 3px solid #3b82f6;
+        padding: 16px;
+        border-radius: 6px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
     }
     .metric-title {
         color: #94a3b8;
-        font-size: 14px;
-        font-weight: 600;
+        font-size: 11px;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.08em;
     }
     .metric-value {
         color: #f8fafc;
-        font-size: 28px;
+        font-size: 24px;
         font-weight: 700;
-        margin-top: 5px;
+        margin-top: 4px;
+    }
+    .status-badge {
+        background-color: rgba(34, 197, 94, 0.15);
+        color: #22c55e;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-weight: 600;
+        font-size: 13px;
+        border: 1px solid rgba(34, 197, 94, 0.3);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -59,23 +71,23 @@ def verificar_autenticacao():
         st.session_state.autenticado = False
     
     if not st.session_state.autenticado:
-        st.sidebar.markdown("### 🔒 Acesso Restrito")
+        st.sidebar.markdown("### 🔒 Secure Gateway")
         senha_input = st.sidebar.text_input("Palavra-passe corporativa:", type="password")
-        if st.sidebar.button("🔓 Autenticar", use_container_width=True):
+        if st.sidebar.button("🔓 Autenticar Acesso", use_container_width=True):
             if senha_input == "ciber2026":
                 st.session_state.autenticado = True
                 st.rerun()
             else:
-                st.sidebar.error("❌ Palavra-passe incorreta.")
+                st.sidebar.error("❌ Credencial inválida.")
         return False
     return True
 
 if not verificar_autenticacao():
-    st.title("🛡️ Enterprise Threat Intelligence Dashboard")
-    st.warning("⚠️ Autenticação necessária. Introduza a chave corporativa de acesso na barra lateral (`ciber2026`).")
+    st.title("⚡ Enterprise Threat Intelligence")
+    st.warning("⚠️ Acesso restrito. Introduza a chave corporativa de autenticação na barra lateral (`ciber2026`).")
     st.stop()
 
-# --- INTEGRAÇÃO ROBUSTA COM SUPABASE ---
+# --- CARREGAR DADOS DO SUPABASE ---
 @st.cache_data(ttl=5)
 def carregar_dados():
     if not SUPABASE_URL or not SUPABASE_KEY:
@@ -92,20 +104,19 @@ def carregar_dados():
                 return df
         return pd.DataFrame()
     except Exception as e:
-        st.error(f"Erro ao conectar com o Supabase: {e}")
+        st.error(f"Erro de conexão com o banco de dados: {e}")
         return pd.DataFrame()
 
-# --- CORPO PRINCIPAL DO DASHBOARD ---
-st.title("🛡️ Enterprise Threat Intelligence Dashboard")
-st.markdown("Painel avançado de telemetria, monitoramento e registo integrado ao Supabase.")
+# --- CABEÇALHO DO PAINEL (ESTILO DASHBOARD DE INFRAESTRUTURA) ---
+st.markdown("### ⚡ Supabase Observability & Threat Telemetry")
+st.markdown("Painel de controlo em tempo real integrado ao cluster de produção.")
 
-# Carregar os dados
 df_dados = carregar_dados()
 
 if not df_dados.empty:
-    # --- BARRA LATERAL DE FILTROS AVANÇADOS ---
+    # --- BARRA LATERAL ---
     st.sidebar.markdown("---")
-    st.sidebar.subheader("⚙️ Filtros de Telemetria")
+    st.sidebar.subheader("⚙️ Filtros de Fleet")
     
     operadores_disponiveis = ["Todos"] + list(df_dados["nome_operador"].dropna().unique()) if "nome_operador" in df_dados.columns else ["Todos"]
     operador_selecionado = st.sidebar.selectbox("Filtrar por Operador:", operadores_disponiveis)
@@ -113,7 +124,7 @@ if not df_dados.empty:
     if operador_selecionado != "Todos":
         df_dados = df_dados[df_dados["nome_operador"] == operador_selecionado]
 
-    # --- MÉTRICAS DE RESUMO EXECUTIVO ---
+    # --- MÉTRICAS EXECUTIVAS (ESTILO CARDS DE MONITOR) ---
     total_registros = len(df_dados)
     operadores_unicos = df_dados["nome_operador"].nunique() if "nome_operador" in df_dados.columns else 0
 
@@ -121,7 +132,7 @@ if not df_dados.empty:
     with col1:
         st.markdown(f"""
             <div class="metric-card">
-                <div class="metric-title">Total de Registros</div>
+                <div class="metric-title">Total Queries (Fleet)</div>
                 <div class="metric-value">{total_registros}</div>
             </div>
         """, unsafe_allow_html=True)
@@ -131,38 +142,40 @@ if not df_dados.empty:
             ultima_data = df_dados["data_hora"].max().strftime("%d/%m/%Y %H:%M")
         st.markdown(f"""
             <div class="metric-card">
-                <div class="metric-title">Última Atividade</div>
-                <div class="metric-value">{ultima_data}</div>
+                <div class="metric-title">Último Evento Registado</div>
+                <div class="metric-value" style="font-size: 18px; margin-top: 8px;">{ultima_data}</div>
             </div>
         """, unsafe_allow_html=True)
     with col3:
         st.markdown(f"""
             <div class="metric-card">
-                <div class="metric-title">Operadores Ativos</div>
+                <div class="metric-title">Active Operators</div>
                 <div class="metric-value">{operadores_unicos}</div>
             </div>
         """, unsafe_allow_html=True)
     with col4:
         st.markdown(f"""
             <div class="metric-card">
-                <div class="metric-title">Estado do Sistema</div>
-                <div class="metric-value" style="color: #22c55e; font-size: 24px;">Operacional 🟢</div>
+                <div class="metric-title">Database Status</div>
+                <div class="metric-value" style="margin-top: 6px;"><span class="status-badge">ONLINE 🟢</span></div>
             </div>
         """, unsafe_allow_html=True)
 
-    st.divider()
+    st.markdown("<br>", unsafe_allow_html=True)
 
-    # --- GRÁFICO DE ATIVIDADE TEMPORAL ---
+    # --- GRÁFICO DE TELEMETRIA TEMPORAL ---
     if "data_hora" in df_dados.columns and not df_dados["data_hora"].isna().all():
-        st.subheader("📈 Telemetria de Atividade por Período")
+        st.subheader("📊 Query Throughput by Timeline")
         df_chart = df_dados.copy()
         df_chart["data_dia"] = df_chart["data_hora"].dt.date
         counts_por_dia = df_chart.groupby("data_dia").size().reset_index(name="quantidade")
         st.bar_chart(counts_por_dia.set_index("data_dia"), color="#3b82f6")
 
-    # --- TABELA DE DADOS DETALHADA COM BUSCA ---
-    st.subheader("📋 Histórico Detalhado de Consultas")
-    filtro_pesquisa = st.text_input("🔍 Pesquisa Global nos Registos:", placeholder="Digite para filtrar termos, operadores ou datas...")
+    st.divider()
+
+    # --- TABELA DE LOGS DETALHADA ---
+    st.subheader("📋 Query Telemetry Logs & Activity Stream")
+    filtro_pesquisa = st.text_input("🔍 Search Query Logs:", placeholder="Filtrar por termos, operador ou carimbo temporal...")
     
     if filtro_pesquisa:
         mask = df_dados.astype(str).apply(lambda x: x.str.contains(filtro_pesquisa, case=False)).any(axis=1)
@@ -172,4 +185,4 @@ if not df_dados.empty:
 
     st.dataframe(df_exibicao, use_container_width=True)
 else:
-    st.info("ℹ️ Nenhum dado encontrado na tabela `historico_pesquisas` do Supabase ou aguardando conexão.")
+    st.info("ℹ️ A aguardar fluxo de dados na base de dados Supabase...")
