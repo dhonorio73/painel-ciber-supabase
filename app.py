@@ -1,71 +1,191 @@
+﻿import pandas as pd
 import streamlit as st
-import pandas as pd
+from supabase import create_client
+from relatorio import gerar_relatorio
+from pipeline_demo import executar_pipeline
 
-# --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(
-    page_title="Enterprise Threat Intelligence",
-    page_icon="⚡",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+st.set_page_config(page_title="Dh73 # Painel de Atividades e Pesquisas", page_icon="📊", layout="wide")
+st.markdown("""
+<style>
+.stApp { background: #f4f7fb; color: #15283f; }
+[data-testid="stHeader"] { background: #f4f7fb; }
+[data-testid="stSidebar"] { background: #12263e; }
+[data-testid="stSidebar"] * { color: #e6edf6; }
+[data-testid="stSidebar"] input { color: #ffffff !important; caret-color: #ffffff; }
+.block-container { max-width: 1500px; padding-top: 2.4rem; padding-bottom: 3rem; }
+.dh-hero { background: linear-gradient(115deg, #102841 0%, #174365 72%, #126c77 100%); color: white; border-radius: 18px; padding: 2rem 2.3rem; margin-bottom: 1.4rem; }
+.dh-kicker { color: #99e1db; text-transform: uppercase; letter-spacing: .16em; font-size: .72rem; font-weight: 700; }
+.dh-hero h1 { color: white; font-size: clamp(1.8rem, 3vw, 2.7rem); line-height: 1.15; margin: .5rem 0; padding: 0; }
+.dh-hero p { color: #d7e6ef; margin: .6rem 0 0; font-size: 1rem; }
+[data-testid="stMetric"] { background: white; border: 1px solid #dce6ef; border-radius: 14px; padding: 1.1rem 1.2rem; box-shadow: 0 4px 18px rgba(27, 55, 82, .05); }
+[data-testid="stMetricLabel"] { color: #60758a; font-weight: 600; }
+[data-testid="stMetricValue"] { color: #143a5a; font-weight: 700; }
+[data-testid="stExpander"] { border: 1px solid #dce6ef; border-radius: 12px; background: #fff; }
+[data-testid="stDownloadButton"] button { border: 1px solid #a8c5d8; border-radius: 9px; color: #164b68; }
+h2, h3 { color: #193a56; }
+@media(max-width: 700px) { .dh-hero { padding: 1.35rem; } .block-container { padding-top: 1rem; } }
+</style>
+<div class="dh-hero"><div class="dh-kicker">DH73 · INTELIGÊNCIA DE DADOS</div><h1>Painel de Atividades e Pesquisas</h1><p>Uma visão clara dos registros, pessoas e departamentos.</p></div>
+""", unsafe_allow_html=True)
+st.sidebar.markdown("### DH73 | Painel")
+st.sidebar.caption("Selecione a fonte e refine sua análise.")
 
-# --- DADOS ESTÁTICOS ---
-dados = [
-    {"id": 1, "nome_operador": "Ana Silva", "registro_funcionario": "101", "data_nascimento": "12/03/1992", "termo_pesquisado": "Análise de vulnerabilidades CVE-2026", "data_hora": "2026-10-01 09:15:22", "departamento": "Segurança da Informação"},
-    {"id": 2, "nome_operador": "Carlos Mendes", "registro_funcionario": "102", "data_nascimento": "22/07/1988", "termo_pesquisado": "Configuração de Firewall corporativo", "data_hora": "2026-10-02 11:30:45", "departamento": "Infraestrutura e Redes"},
-    {"id": 3, "nome_operador": "Beatriz Costa", "registro_funcionario": "103", "data_nascimento": "05/11/1995", "termo_pesquisado": "Auditoria de conformidade LGPD", "data_hora": "2026-10-03 14:10:00", "departamento": "Compliance"},
-    {"id": 4, "nome_operador": "Marcos Oliveira", "registro_funcionario": "104", "data_nascimento": "14/02/1990", "termo_pesquisado": "Python Flask API endpoints security", "data_hora": "2026-10-04 16:20:11", "departamento": "Desenvolvimento / TI"},
-    {"id": 5, "nome_operador": "Ana Silva", "registro_funcionario": "101", "data_nascimento": "12/03/1992", "termo_pesquisado": "Mitigação de ataques DDoS", "data_hora": "2026-10-05 08:45:33", "departamento": "Segurança da Informação"},
-    {"id": 6, "nome_operador": "Juliana Rocha", "registro_funcionario": "105", "data_nascimento": "30/09/1993", "termo_pesquisado": "Gestão de acessos IAM Supabase", "data_hora": "2026-10-06 10:05:50", "departamento": "Governança de Dados"},
-    {"id": 7, "nome_operador": "Carlos Mendes", "registro_funcionario": "102", "data_nascimento": "22/07/1988", "termo_pesquisado": "Relatório de incidentes críticos", "data_hora": "2026-10-07 13:22:19", "departamento": "Infraestrutura e Redes"},
-    {"id": 8, "nome_operador": "Lucas Pereira", "registro_funcionario": "106", "data_nascimento": "18/12/1991", "termo_pesquisado": "Centro de Operações (SOC)", "data_hora": "2026-10-08 17:50:02", "departamento": "Centro de Operações (SOC)"},
-    {"id": 9, "nome_operador": "Beatriz Costa", "registro_funcionario": "103", "data_nascimento": "05/11/1995", "termo_pesquisado": "Termos de uso e privacidade", "data_hora": "2026-10-09 09:33:40", "departamento": "Compliance"},
-    {"id": 10, "nome_operador": "Marcos Oliveira", "registro_funcionario": "104", "data_nascimento": "14/02/1990", "termo_pesquisado": "Criptografia Fernet e SHA-256", "data_hora": "2026-10-10 11:12:04", "departamento": "Desenvolvimento / TI"}
+COLUNAS = ["id", "nome_operador", "departamento", "termo_pesquisado", "data_hora"]
+DEMO = [
+    {"id": 1, "nome_operador": "Ana", "departamento": "Segurança", "termo_pesquisado": "Vulnerabilidades", "data_hora": "2026-10-01T09:15:00Z"},
+    {"id": 2, "nome_operador": "Carlos", "departamento": "Infraestrutura", "termo_pesquisado": "Firewall", "data_hora": "2026-10-02T11:30:00Z"},
+    {"id": 3, "nome_operador": "Ana", "departamento": "Segurança", "termo_pesquisado": "DDoS", "data_hora": "2026-10-03T08:45:00Z"},
 ]
 
-df_dados = pd.DataFrame(dados)
+def carregar_atividades(cliente):
+    # Limite explícito para evitar apresentar uma amostra como histórico completo.
+    resposta = cliente.table("historico_pesquisas").select(",".join(COLUNAS)).order("id", desc=True).limit(1000).execute()
+    return resposta.data
 
-# --- CABEÇALHO ---
-st.markdown("### ⚡ Supabase Observability & Threat Telemetry")
-st.markdown("Painel de controlo corporativo em tempo real integrado ao cluster de produção.")
-st.sidebar.markdown("---")
+fonte = st.sidebar.radio("Fonte dos dados", ["Demonstração", "Supabase"])
+if fonte == "Demonstração":
+    registros = DEMO
+    st.info("Modo de demonstração: dados fictícios, sem conexão com banco de dados.")
+else:
+    try:
+        url = st.secrets["SUPABASE_URL"]
+        chave = st.secrets["SUPABASE_KEY"]
+    except (KeyError, FileNotFoundError):
+        st.error("Configure SUPABASE_URL e SUPABASE_KEY nos secrets do Streamlit. Consulte o README.")
+        st.stop()
+    cliente = create_client(url, chave)
+    with st.sidebar.form("login"):
+        email = st.text_input("E-mail")
+        senha = st.text_input("Senha", type="password")
+        entrar = st.form_submit_button("Entrar")
+    if st.sidebar.button("Sair"):
+        st.session_state.pop("tokens", None)
+        st.rerun()
+    try:
+        if entrar:
+            sessao = cliente.auth.sign_in_with_password({"email": email, "password": senha}).session
+            st.session_state["tokens"] = (sessao.access_token, sessao.refresh_token)
+        elif "tokens" in st.session_state:
+            sessao = cliente.auth.set_session(*st.session_state["tokens"]).session
+            st.session_state["tokens"] = (sessao.access_token, sessao.refresh_token)
+        else:
+            st.info("Entre com um usuário autorizado do Supabase para consultar os dados.")
+            st.stop()
+        registros = carregar_atividades(cliente)
+    except Exception:
+        st.error("Não foi possível consultar as atividades. Verifique a configuração, a tabela e as permissões de acesso.")
+        st.stop()
+    with st.sidebar.expander("Alterar senha"):
+        with st.form("alterar_senha", clear_on_submit=True):
+            nova_senha = st.text_input("Nova senha", type="password")
+            confirmar_senha = st.text_input("Confirme a nova senha", type="password")
+            alterar = st.form_submit_button("Salvar nova senha")
+        if alterar:
+            if len(nova_senha) < 8 or nova_senha != confirmar_senha:
+                st.error("Use pelo menos 8 caracteres e confirme a mesma senha.")
+            else:
+                try:
+                    cliente.auth.update_user({"password": nova_senha})
+                    st.success("Senha alterada. Use a nova senha no próximo acesso.")
+                except Exception:
+                    st.error("Não foi possível alterar a senha. Verifique as regras de segurança do Supabase.")
+    st.caption("Consulta concluída. São exibidos até 1.000 registros com maior ID; os indicadores consideram apenas os registros retornados. A data é armazenada como texto no banco.")
 
-# --- FILTROS NA BARRA LATERAL ---
-st.sidebar.subheader("⚙️ Filtros de Fleet")
+frame = pd.DataFrame(registros, columns=COLUNAS)
+frame["data_hora"] = pd.to_datetime(frame["data_hora"], errors="coerce", utc=True, format="mixed")
+invalidas = int(frame["data_hora"].isna().sum())
+st.sidebar.header("Filtros")
+for coluna, rotulo in [("nome_operador", "Operador"), ("departamento", "Departamento")]:
+    opcoes = sorted(frame[coluna].dropna().astype(str).unique().tolist())
+    selecionado = st.sidebar.selectbox(rotulo, ["Todos"] + opcoes)
+    if selecionado != "Todos":
+        frame = frame[frame[coluna] == selecionado]
 
-operadores = ["Todos"] + list(df_dados["nome_operador"].dropna().unique())
-op_sel = st.sidebar.selectbox("Filtrar por Operador:", operadores)
+if not frame["data_hora"].dropna().empty and st.sidebar.checkbox("Filtrar por período"):
+    datas = frame["data_hora"].dropna().dt.date
+    periodo = st.sidebar.date_input("Período (UTC)", value=(datas.min(), datas.max()), min_value=datas.min(), max_value=datas.max())
+    if len(periodo) == 2:
+        inicio, fim = periodo
+        if inicio > fim:
+            st.sidebar.error("A data inicial deve ser anterior à data final.")
+            st.stop()
+        datas_frame = frame["data_hora"].dt.date
+        frame = frame[datas_frame.between(inicio, fim)]
+        st.sidebar.caption("O período exclui registros sem data reconhecida.")
+    else:
+        st.sidebar.info("Selecione as datas inicial e final.")
+        st.stop()
 
-deptos = ["Todos"] + list(df_dados["departamento"].dropna().unique())
-dept_sel = st.sidebar.selectbox("Filtrar por Departamento:", deptos)
+if invalidas:
+    st.warning(f"{invalidas} registro(s) na amostra estão sem data reconhecida. Confira o formato no banco.")
+st.markdown("### Visão geral")
+st.caption("Indicadores e filtros consideram somente os registros carregados. Datas sem fuso informado são interpretadas como UTC.")
+ultimo = frame["data_hora"].max()
+a, b, c, d = st.columns(4)
+a.metric("Pesquisas", len(frame))
+b.metric("Operadores", frame["nome_operador"].nunique())
+c.metric("Departamentos", frame["departamento"].nunique())
+d.metric("Última atividade (UTC)", ultimo.strftime("%d/%m/%Y %H:%M") if pd.notna(ultimo) else "Sem data")
+if frame.empty:
+    st.info("Nenhum registro encontrado para os filtros selecionados.")
+else:
+    st.markdown("### Análise de atividades")
+    esquerda, direita = st.columns(2)
+    with esquerda:
+        st.subheader("Pesquisas por departamento")
+        st.bar_chart(frame["departamento"].fillna("Não informado").value_counts())
+    with direita:
+        st.subheader("Pesquisas por dia (UTC)")
+        por_dia = frame.dropna(subset=["data_hora"]).groupby(frame["data_hora"].dt.date).size()
+        if por_dia.empty:
+            st.info("Não há datas reconhecidas para este gráfico.")
+        else:
+            st.line_chart(por_dia)
+    st.subheader("Registros de atividades")
+    tabela = frame.sort_values("data_hora", ascending=False)
+    st.dataframe(tabela, use_container_width=True, hide_index=True)
+    st.download_button("Baixar registros em CSV", tabela.to_csv(index=False).encode("utf-8-sig"), file_name="atividades.csv", mime="text/csv")
+    st.download_button("Baixar relatório com gráfico (HTML)", gerar_relatorio(tabela, fonte).encode("utf-8"), file_name="relatorio_dh73.html", mime="text/html")
+    st.caption("Abra o relatório no navegador para imprimir ou salvar como PDF.")
 
-if op_sel != "Todos":
-    df_dados = df_dados[df_dados["nome_operador"] == op_sel]
+with st.expander("Como os dados chegam ao painel"):
+    st.markdown("O PostgreSQL do Supabase armazena os registros. O painel consulta a tabela com as permissões do usuário e apresenta os resultados. No modo demonstração, usa exemplos fictícios.")
+    st.code("SELECT departamento, COUNT(*) AS total\nFROM public.historico_pesquisas\nGROUP BY departamento\nORDER BY total DESC;", language="sql")
 
-if dept_sel != "Todos":
-    df_dados = df_dados[df_dados["departamento"] == dept_sel]
 
-# --- MÉTRICAS ---
-total_reg = len(df_dados)
-ops_unicos = df_dados["nome_operador"].nunique()
-ultima = df_dados["data_hora"].max() if not df_dados.empty else "N/A"
+with st.expander("Demonstração de pipeline: atendimento fictício"):
+    st.caption("Exemplo local: CSV, JSON e texto são tratados e analisados em SQLite em memória. Os dados não são enviados ao Supabase.")
+    linhas_demo, resumo_demo, erros_demo = executar_pipeline()
+    st.write(f"Registros tratados: {len(linhas_demo)} | Problemas: {len(erros_demo)}")
+    if erros_demo:
+        st.warning("; ".join(erros_demo))
+    st.dataframe(pd.DataFrame(linhas_demo, columns=["ID", "Canal", "Data", "Descrição", "Arquivo de origem", "Processado em UTC"]), hide_index=True)
+    if resumo_demo:
+        st.bar_chart(pd.DataFrame(resumo_demo, columns=["Canal", "Tickets"]).set_index("Canal"))
+    st.caption("SLA e recorrência não são calculados: faltam os dados e regras necessários. Isto é uma simulação, não um lakehouse de produção.")
 
-c1, c2, c3, c4 = st.columns(4)
+with st.expander("Lotes Parquet do ETL"):
+    from pathlib import Path
+    import json
+    pasta_lotes = Path(__file__).parent / "dados_processados"
+    lotes = sorted((p for p in pasta_lotes.iterdir() if p.is_dir() and not p.name.startswith(".") and (p / "manifesto.json").is_file()), reverse=True) if pasta_lotes.exists() else []
+    if not lotes:
+        st.info("Nenhum lote encontrado. Execute python etl.py para gerar os dados fictícios.")
+    else:
+        escolhido = st.selectbox("Lote", lotes, format_func=lambda p: p.name)
+        try:
+            manifesto = json.loads((escolhido / "manifesto.json").read_text(encoding="utf-8"))
+            fatos = pd.read_parquet(escolhido / "gold" / "fato_atendimentos.parquet")
+            canais = pd.read_parquet(escolhido / "gold" / "dim_canal.parquet")
+            datas = pd.read_parquet(escolhido / "gold" / "dim_tempo.parquet")
+            visual = fatos.merge(canais[["id_canal", "canal"]], on="id_canal", validate="many_to_one").merge(datas[["id_data", "data"]], on="id_data", validate="many_to_one")
+            st.caption(f"Lote {escolhido.name} • {len(visual)} registros • processado em {manifesto.get('executado_em_utc', 'não informado')}")
+            st.write("Arquivos de origem:", ", ".join(manifesto.get("arquivos_origem", [])))
+            st.bar_chart(visual["canal"].value_counts())
+            st.dataframe(visual[["id", "data", "canal", "descricao", "_source_file"]], hide_index=True)
+        except (OSError, ValueError, KeyError) as exc:
+            st.error(f"Não foi possível abrir este lote: {exc}")
 
-with c1:
-    st.metric(label="TOTAL QUERIES", value=total_reg)
 
-with c2:
-    st.metric(label="ÚLTIMO EVENTO", value=ultima)
+st.markdown('<div style="margin-top:3rem;padding:1.3rem 0;border-top:1px solid #dce6ef;color:#60758a;text-align:center;font-size:.85rem;">DH73 · Criado por Douglas Honório</div>', unsafe_allow_html=True)
 
-with c3:
-    st.metric(label="ACTIVE OPERATORS", value=ops_unicos)
-
-with c4:
-    st.metric(label="DATABASE STATUS", value="🟢 Online")
-
-st.markdown("---")
-
-# --- TABELA ---
-st.subheader("📋 Registo de Atividades e Pesquisas")
-st.dataframe(df_dados, use_container_width=True)
