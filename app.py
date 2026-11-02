@@ -30,6 +30,42 @@ h2, h3 { color: #193a56; }
 st.sidebar.markdown("### DH73 | Painel")
 st.sidebar.caption("Selecione a fonte e refine sua análise.")
 
+with st.expander("DH73 Atendimento | Indicadores de suporte (demonstração)", expanded=False):
+    st.caption("Cenário fictício independente das pesquisas e do Supabase. Os filtros desta seção não alteram o painel abaixo.")
+    chamados = pd.DataFrame([
+        {"chamado": "AT-001", "assunto": "Acesso à conta", "equipe": "Suporte", "canal": "E-mail", "status": "Concluído", "abertura": "2026-10-01 09:00", "conclusão": "2026-10-01 13:00"},
+        {"chamado": "AT-002", "assunto": "Pagamento", "equipe": "Financeiro", "canal": "Chat", "status": "Em andamento", "abertura": "2026-10-02 10:00", "conclusão": None},
+        {"chamado": "AT-003", "assunto": "Erro no sistema", "equipe": "Suporte", "canal": "Chat", "status": "Aberto", "abertura": "2026-10-03 08:00", "conclusão": None},
+        {"chamado": "AT-004", "assunto": "Pagamento", "equipe": "Financeiro", "canal": "Telefone", "status": "Concluído", "abertura": "2026-10-03 09:00", "conclusão": "2026-10-04 09:00"},
+        {"chamado": "AT-005", "assunto": "Acesso à conta", "equipe": "Suporte", "canal": "E-mail", "status": "Concluído", "abertura": "2026-10-04 12:00", "conclusão": "2026-10-04 14:00"},
+    ])
+    chamados["abertura"] = pd.to_datetime(chamados["abertura"], utc=True)
+    chamados["conclusão"] = pd.to_datetime(chamados["conclusão"], utc=True)
+    filtro_status = st.selectbox("Status dos atendimentos", ["Todos", "Aberto", "Em andamento", "Concluído"], key="suporte_status")
+    if filtro_status != "Todos":
+        chamados = chamados[chamados["status"] == filtro_status]
+    finalizados = chamados[chamados["status"] == "Concluído"].copy()
+    horas = (finalizados["conclusão"] - finalizados["abertura"]).dt.total_seconds().div(3600)
+    horas = horas[horas >= 0].dropna()
+    total, abertos, andamento, resolucao = st.columns(4)
+    total.metric("Atendimentos", len(chamados))
+    abertos.metric("Abertos", int((chamados["status"] == "Aberto").sum()))
+    andamento.metric("Em andamento", int((chamados["status"] == "Em andamento").sum()))
+    resolucao.metric("Tempo médio de resolução", f"{horas.mean():.1f} h" if not horas.empty else "Sem dados")
+    st.caption("Tempo médio em horas corridas, somente para chamados concluídos com abertura e conclusão válidas. Indicadores seguem o filtro de status.")
+    assuntos, canais = st.columns(2)
+    with assuntos:
+        st.subheader("Assuntos mais frequentes")
+        if chamados.empty:
+            st.info("Nenhum chamado para o filtro escolhido.")
+        else:
+            st.bar_chart(chamados["assunto"].value_counts())
+    with canais:
+        st.subheader("Atendimentos por canal")
+        if not chamados.empty:
+            st.bar_chart(chamados["canal"].value_counts())
+    st.dataframe(chamados, hide_index=True, use_container_width=True)
+
 COLUNAS = ["id", "nome_operador", "departamento", "termo_pesquisado", "data_hora"]
 DEMO = [
     {"id": 1, "nome_operador": "Ana", "departamento": "Segurança", "termo_pesquisado": "Vulnerabilidades", "data_hora": "2026-10-01T09:15:00Z"},

@@ -7,6 +7,7 @@ Painel interativo de pesquisas com integração ao Supabase e uma demonstração
 ## Funcionalidades
 
 - Indicadores, filtros e gráficos com dados fictícios no modo demonstração.
+- Seção independente de atendimento fictício, com filtro de status, canais, assuntos e tempo médio de resolução em horas corridas.
 - Consulta ao Supabase com autenticação e permissões de acesso.
 - Exportação em CSV e relatório HTML, que pode ser impresso em PDF pelo navegador.
 - Demonstração de ingestão de dados CSV, JSON e TXT e geração de arquivos Parquet.
