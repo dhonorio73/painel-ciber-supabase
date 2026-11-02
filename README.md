@@ -2,6 +2,8 @@
 
 Painel interativo de pesquisas com integração ao Supabase e uma demonstração de engenharia de dados. Criado por **Douglas Honório** para apresentar análise de dados, consultas SQL e processamento em camadas.
 
+[Abrir demonstração online](https://painel-ciber-supabase-lgeyn7zzphlichhycpfqkb.streamlit.app/) — selecione **Demonstração** para explorar dados fictícios.
+
 ## Funcionalidades
 
 - Indicadores, filtros e gráficos com dados fictícios no modo demonstração.
